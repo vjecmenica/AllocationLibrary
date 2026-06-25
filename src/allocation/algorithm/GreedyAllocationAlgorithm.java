@@ -1,5 +1,7 @@
 package allocation.algorithm;
 
+import allocation.constraint.ConstraintResult;
+import allocation.constraint.ConstraintValidator;
 import allocation.model.Allocation;
 import allocation.model.AllocationRequest;
 import allocation.model.AllocationResult;
@@ -7,11 +9,11 @@ import allocation.model.AllocationStatistics;
 import allocation.model.RejectedRequest;
 import allocation.model.Resource;
 import allocation.model.ResourceRequirement;
-import allocation.constraint.ConstraintValidator;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
 
@@ -22,6 +24,10 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
     }
 
     public GreedyAllocationAlgorithm(ConstraintValidator constraintValidator) {
+        if (constraintValidator == null) {
+            throw new IllegalArgumentException("ConstraintValidator ne sme biti null.");
+        }
+
         this.constraintValidator = constraintValidator;
     }
 
@@ -41,19 +47,19 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         );
 
         for (AllocationRequest request : sortedRequests) {
-            List<Resource> selectedResources = findResourcesForRequest(
+            AllocationAttempt attempt = findResourcesForRequest(
                     request,
                     resources,
                     allocations
             );
 
-            if (selectedResources != null) {
-                allocations.add(new Allocation(request, selectedResources));
+            if (attempt.isSuccessful()) {
+                allocations.add(new Allocation(request, attempt.getSelectedResources()));
             } else {
                 rejectedRequests.add(
                         new RejectedRequest(
                                 request,
-                                "Nije pronađen skup resursa koji zadovoljava sve potrebe zahteva."
+                                attempt.getRejectionReason()
                         )
                 );
             }
@@ -79,7 +85,7 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         return "GREEDY";
     }
 
-    private List<Resource> findResourcesForRequest(
+    private AllocationAttempt findResourcesForRequest(
             AllocationRequest request,
             List<Resource> resources,
             List<Allocation> currentAllocations
@@ -87,7 +93,7 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         List<Resource> selectedResources = new ArrayList<>();
 
         for (ResourceRequirement requirement : request.getResourceRequirements()) {
-            List<Resource> resourcesForRequirement = findResourcesForRequirement(
+            RequirementSearchResult searchResult = findResourcesForRequirement(
                     request,
                     requirement,
                     resources,
@@ -95,17 +101,17 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
                     selectedResources
             );
 
-            if (resourcesForRequirement.size() < requirement.getQuantity()) {
-                return null;
+            if (!searchResult.isSuccessful(requirement.getQuantity())) {
+                return AllocationAttempt.rejected(searchResult.getRejectionReason());
             }
 
-            selectedResources.addAll(resourcesForRequirement);
+            selectedResources.addAll(searchResult.getSelectedResources());
         }
 
-        return selectedResources;
+        return AllocationAttempt.successful(selectedResources);
     }
 
-    private List<Resource> findResourcesForRequirement(
+    private RequirementSearchResult findResourcesForRequirement(
             AllocationRequest request,
             ResourceRequirement requirement,
             List<Resource> resources,
@@ -113,6 +119,7 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
             List<Resource> alreadySelectedResources
     ) {
         List<Resource> selected = new ArrayList<>();
+        List<String> violationMessages = new ArrayList<>();
 
         for (Resource resource : resources) {
             if (selected.size() == requirement.getQuantity()) {
@@ -123,31 +130,86 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
                 continue;
             }
 
-            if (canAllocateResourceToRequirement(
+            ConstraintResult constraintResult = constraintValidator.validate(
                     request,
                     requirement,
                     resource,
                     currentAllocations
-            )) {
+            );
+
+            if (constraintResult.isSatisfied()) {
                 selected.add(resource);
+            } else {
+                if (resource.getType().equals(requirement.getResourceType())) {
+                    violationMessages.add(
+                            resource.getName() + " [" + resource.getType() + "]: " +
+                                    constraintResult.getMessage()
+                    );
+                }
             }
         }
 
-        return selected;
+        if (selected.size() < requirement.getQuantity()) {
+            String reason = buildRejectionReason(
+                    request,
+                    requirement,
+                    selected.size(),
+                    violationMessages
+            );
+
+            return RequirementSearchResult.rejected(selected, reason);
+        }
+
+        return RequirementSearchResult.successful(selected);
     }
 
-    private boolean canAllocateResourceToRequirement(
+    private String buildRejectionReason(
             AllocationRequest request,
             ResourceRequirement requirement,
-            Resource resource,
-            List<Allocation> currentAllocations
+            int foundCount,
+            List<String> violationMessages
     ) {
-        return constraintValidator.isValid(
-                request,
-                requirement,
-                resource,
-                currentAllocations
-        );
+        StringBuilder builder = new StringBuilder();
+
+        builder.append("Zahtev '")
+                .append(request.getName())
+                .append("' nije moguće alocirati. ");
+
+        builder.append("Nije pronađeno dovoljno resursa za potrebu: tip=")
+                .append(requirement.getResourceType())
+                .append(", potrebno=")
+                .append(requirement.getQuantity())
+                .append(", pronađeno=")
+                .append(foundCount)
+                .append(".");
+
+        Map<String, Integer> requiredCapacities = requirement.getRequiredCapacities();
+
+        if (requiredCapacities != null && !requiredCapacities.isEmpty()) {
+            builder.append(" Traženi kapaciteti: ")
+                    .append(requiredCapacities)
+                    .append(".");
+        }
+
+        if (violationMessages != null && !violationMessages.isEmpty()) {
+            builder.append(" Primer razloga: ");
+
+            int maxMessages = Math.min(3, violationMessages.size());
+
+            for (int i = 0; i < maxMessages; i++) {
+                builder.append(violationMessages.get(i));
+
+                if (i < maxMessages - 1) {
+                    builder.append(" | ");
+                }
+            }
+
+            if (violationMessages.size() > maxMessages) {
+                builder.append(" | ...");
+            }
+        }
+
+        return builder.toString();
     }
 
     private boolean isAlreadySelected(Resource resource, List<Resource> alreadySelectedResources) {
@@ -168,5 +230,79 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         }
 
         return sum;
+    }
+
+    private static class AllocationAttempt {
+
+        private boolean successful;
+        private List<Resource> selectedResources;
+        private String rejectionReason;
+
+        private AllocationAttempt(
+                boolean successful,
+                List<Resource> selectedResources,
+                String rejectionReason
+        ) {
+            this.successful = successful;
+            this.selectedResources = selectedResources;
+            this.rejectionReason = rejectionReason;
+        }
+
+        public static AllocationAttempt successful(List<Resource> selectedResources) {
+            return new AllocationAttempt(true, selectedResources, null);
+        }
+
+        public static AllocationAttempt rejected(String rejectionReason) {
+            return new AllocationAttempt(false, new ArrayList<>(), rejectionReason);
+        }
+
+        public boolean isSuccessful() {
+            return successful;
+        }
+
+        public List<Resource> getSelectedResources() {
+            return selectedResources;
+        }
+
+        public String getRejectionReason() {
+            return rejectionReason;
+        }
+    }
+
+    private static class RequirementSearchResult {
+
+        private List<Resource> selectedResources;
+        private String rejectionReason;
+
+        private RequirementSearchResult(
+                List<Resource> selectedResources,
+                String rejectionReason
+        ) {
+            this.selectedResources = selectedResources;
+            this.rejectionReason = rejectionReason;
+        }
+
+        public static RequirementSearchResult successful(List<Resource> selectedResources) {
+            return new RequirementSearchResult(selectedResources, null);
+        }
+
+        public static RequirementSearchResult rejected(
+                List<Resource> selectedResources,
+                String rejectionReason
+        ) {
+            return new RequirementSearchResult(selectedResources, rejectionReason);
+        }
+
+        public boolean isSuccessful(int requiredQuantity) {
+            return selectedResources.size() >= requiredQuantity;
+        }
+
+        public List<Resource> getSelectedResources() {
+            return selectedResources;
+        }
+
+        public String getRejectionReason() {
+            return rejectionReason;
+        }
     }
 }
