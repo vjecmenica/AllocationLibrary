@@ -2,7 +2,6 @@ package allocation.model;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 public class AllocationRequest {
 
@@ -10,8 +9,7 @@ public class AllocationRequest {
     private String name;
     private TimeWindow timeWindow;
     private int priority;
-    private Map<String, Integer> requirements;
-    private List<String> allowedResourceTypes;
+    private List<ResourceRequirement> resourceRequirements;
 
     public AllocationRequest(
             String id,
@@ -19,8 +17,7 @@ public class AllocationRequest {
             LocalDateTime startTime,
             int durationMinutes,
             int priority,
-            Map<String, Integer> requirements,
-            List<String> allowedResourceTypes
+            List<ResourceRequirement> resourceRequirements
     ) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("ID zahteva ne sme biti prazan.");
@@ -38,28 +35,15 @@ public class AllocationRequest {
             throw new IllegalArgumentException("Trajanje mora biti pozitivno.");
         }
 
+        if (resourceRequirements == null || resourceRequirements.isEmpty()) {
+            throw new IllegalArgumentException("Zahtev mora imati bar jednu potrebu za resursima.");
+        }
+
         this.id = id;
         this.name = name;
         this.timeWindow = new TimeWindow(startTime, startTime.plusMinutes(durationMinutes));
         this.priority = priority;
-        this.requirements = requirements;
-        this.allowedResourceTypes = allowedResourceTypes;
-    }
-
-    public boolean allowsResourceType(String resourceType) {
-        if (allowedResourceTypes == null || allowedResourceTypes.isEmpty()) {
-            return true;
-        }
-
-        return allowedResourceTypes.contains(resourceType);
-    }
-
-    public int getRequiredCapacity(String capacityName) {
-        if (requirements == null) {
-            return 0;
-        }
-
-        return requirements.getOrDefault(capacityName, 0);
+        this.resourceRequirements = resourceRequirements;
     }
 
     public String getId() {
@@ -78,11 +62,7 @@ public class AllocationRequest {
         return priority;
     }
 
-    public Map<String, Integer> getRequirements() {
-        return requirements;
-    }
-
-    public List<String> getAllowedResourceTypes() {
-        return allowedResourceTypes;
+    public List<ResourceRequirement> getResourceRequirements() {
+        return resourceRequirements;
     }
 }

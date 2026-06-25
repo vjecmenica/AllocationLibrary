@@ -6,13 +6,24 @@ import allocation.model.AllocationResult;
 import allocation.model.AllocationStatistics;
 import allocation.model.RejectedRequest;
 import allocation.model.Resource;
+import allocation.model.ResourceRequirement;
+import allocation.constraint.ConstraintValidator;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
+
+    private ConstraintValidator constraintValidator;
+
+    public GreedyAllocationAlgorithm() {
+        this(ConstraintValidator.defaultValidator());
+    }
+
+    public GreedyAllocationAlgorithm(ConstraintValidator constraintValidator) {
+        this.constraintValidator = constraintValidator;
+    }
 
     @Override
     public AllocationResult allocate(List<Resource> resources, List<AllocationRequest> requests) {
@@ -30,16 +41,19 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         );
 
         for (AllocationRequest request : sortedRequests) {
-            Resource selectedResource = findFirstAvailableResource(request, resources, allocations);
+            List<Resource> selectedResources = findResourcesForRequest(
+                    request,
+                    resources,
+                    allocations
+            );
 
-            if (selectedResource != null) {
-                Allocation allocation = new Allocation(request, List.of(selectedResource));
-                allocations.add(allocation);
+            if (selectedResources != null) {
+                allocations.add(new Allocation(request, selectedResources));
             } else {
                 rejectedRequests.add(
                         new RejectedRequest(
                                 request,
-                                "Nije pronađen slobodan resurs koji zadovoljava tip, kapacitet i vremensku dostupnost."
+                                "Nije pronađen skup resursa koji zadovoljava sve potrebe zahteva."
                         )
                 );
             }
@@ -65,82 +79,85 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
         return "GREEDY";
     }
 
-    private Resource findFirstAvailableResource(
+    private List<Resource> findResourcesForRequest(
             AllocationRequest request,
             List<Resource> resources,
             List<Allocation> currentAllocations
     ) {
+        List<Resource> selectedResources = new ArrayList<>();
+
+        for (ResourceRequirement requirement : request.getResourceRequirements()) {
+            List<Resource> resourcesForRequirement = findResourcesForRequirement(
+                    request,
+                    requirement,
+                    resources,
+                    currentAllocations,
+                    selectedResources
+            );
+
+            if (resourcesForRequirement.size() < requirement.getQuantity()) {
+                return null;
+            }
+
+            selectedResources.addAll(resourcesForRequirement);
+        }
+
+        return selectedResources;
+    }
+
+    private List<Resource> findResourcesForRequirement(
+            AllocationRequest request,
+            ResourceRequirement requirement,
+            List<Resource> resources,
+            List<Allocation> currentAllocations,
+            List<Resource> alreadySelectedResources
+    ) {
+        List<Resource> selected = new ArrayList<>();
+
         for (Resource resource : resources) {
-            if (canAllocate(request, resource, currentAllocations)) {
-                return resource;
+            if (selected.size() == requirement.getQuantity()) {
+                break;
+            }
+
+            if (isAlreadySelected(resource, alreadySelectedResources)) {
+                continue;
+            }
+
+            if (canAllocateResourceToRequirement(
+                    request,
+                    requirement,
+                    resource,
+                    currentAllocations
+            )) {
+                selected.add(resource);
             }
         }
 
-        return null;
+        return selected;
     }
 
-    private boolean canAllocate(
+    private boolean canAllocateResourceToRequirement(
             AllocationRequest request,
+            ResourceRequirement requirement,
             Resource resource,
             List<Allocation> currentAllocations
     ) {
-        return hasAllowedType(request, resource)
-                && isAvailableInRequestedTime(request, resource)
-                && hasEnoughCapacity(request, resource)
-                && hasNoTimeConflict(request, resource, currentAllocations);
+        return constraintValidator.isValid(
+                request,
+                requirement,
+                resource,
+                currentAllocations
+        );
     }
 
-    private boolean hasAllowedType(AllocationRequest request, Resource resource) {
-        return request.allowsResourceType(resource.getType());
-    }
-
-    private boolean isAvailableInRequestedTime(AllocationRequest request, Resource resource) {
-        return resource.isAvailableFor(request.getTimeWindow());
-    }
-
-    private boolean hasEnoughCapacity(AllocationRequest request, Resource resource) {
-        Map<String, Integer> requirements = request.getRequirements();
-
-        if (requirements == null || requirements.isEmpty()) {
-            return true;
-        }
-
-        for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
-            String capacityName = entry.getKey();
-            int requiredValue = entry.getValue();
-
-            int resourceCapacity = resource.getCapacity(capacityName);
-
-            if (resourceCapacity < requiredValue) {
-                return false;
+    private boolean isAlreadySelected(Resource resource, List<Resource> alreadySelectedResources) {
+        for (Resource selectedResource : alreadySelectedResources) {
+            if (selectedResource.getId().equals(resource.getId())) {
+                return true;
             }
         }
 
-        return true;
-    }
-
-    private boolean hasNoTimeConflict(
-            AllocationRequest request,
-            Resource resource,
-            List<Allocation> currentAllocations
-    ) {
-        for (Allocation allocation : currentAllocations) {
-            boolean sameResourceUsed = allocation.getAssignedResources()
-                    .stream()
-                    .anyMatch(assignedResource -> assignedResource.getId().equals(resource.getId()));
-
-            if (sameResourceUsed) {
-                boolean timeOverlaps = allocation.getRequest()
-                        .getTimeWindow()
-                        .overlaps(request.getTimeWindow());
-
-                if (timeOverlaps) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return false;
     }
 
     private int calculateTotalPriorityScore(List<Allocation> allocations) {

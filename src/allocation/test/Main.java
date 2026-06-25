@@ -2,14 +2,12 @@ package allocation.test;
 
 import allocation.algorithm.AllocationAlgorithm;
 import allocation.algorithm.GreedyAllocationAlgorithm;
-import allocation.algorithm.BacktrackingAllocationAlgorithm;
-import allocation.algorithm.CpSatAllocationAlgorithm;
-
 import allocation.model.Allocation;
 import allocation.model.AllocationRequest;
 import allocation.model.AllocationResult;
 import allocation.model.RejectedRequest;
 import allocation.model.Resource;
+import allocation.model.ResourceRequirement;
 import allocation.model.TimeWindow;
 
 import java.time.LocalDateTime;
@@ -29,15 +27,8 @@ public class Main {
         System.out.println("Broj zahteva: " + requests.size());
         System.out.println();
 
-        // Za početak testiraj samo Greedy.
-        // Kada implementiraš Backtracking i CP-SAT, odkomentariši i njih.
         List<AllocationAlgorithm> algorithms = new ArrayList<>();
-
         algorithms.add(new GreedyAllocationAlgorithm());
-
-        // Odkomentariši kad implementiraš:
-        // algorithms.add(new BacktrackingAllocationAlgorithm());
-        // algorithms.add(new CpSatAllocationAlgorithm());
 
         for (AllocationAlgorithm algorithm : algorithms) {
             System.out.println("=================================");
@@ -87,7 +78,38 @@ public class Main {
                 List.of(wholeDay)
         );
 
-        return List.of(sala1, sala2, sala3);
+        Resource asistent1 = new Resource(
+                "S1",
+                "Asistent Marko",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        Resource asistent2 = new Resource(
+                "S2",
+                "Asistent Jovan",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        Resource asistent3 = new Resource(
+                "S3",
+                "Asistent Nikola",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        return List.of(
+                sala1,
+                sala2,
+                sala3,
+                asistent1,
+                asistent2,
+                asistent3
+        );
     }
 
     private static List<AllocationRequest> createTestRequests() {
@@ -97,8 +119,10 @@ public class Main {
                 LocalDateTime.of(2026, 7, 1, 10, 0),
                 180,
                 10,
-                Map.of("people", 35),
-                List.of("ROOM")
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 35)),
+                        new ResourceRequirement("STAFF", 2, Map.of())
+                )
         );
 
         AllocationRequest baze = new AllocationRequest(
@@ -107,8 +131,10 @@ public class Main {
                 LocalDateTime.of(2026, 7, 1, 10, 0),
                 120,
                 9,
-                Map.of("people", 70),
-                List.of("ROOM")
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 70)),
+                        new ResourceRequirement("STAFF", 2, Map.of())
+                )
         );
 
         AllocationRequest algoritmi = new AllocationRequest(
@@ -117,8 +143,10 @@ public class Main {
                 LocalDateTime.of(2026, 7, 1, 13, 0),
                 120,
                 8,
-                Map.of("people", 30),
-                List.of("ROOM")
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 30)),
+                        new ResourceRequirement("STAFF", 1, Map.of())
+                )
         );
 
         AllocationRequest vestacka = new AllocationRequest(
@@ -127,8 +155,10 @@ public class Main {
                 LocalDateTime.of(2026, 7, 1, 11, 0),
                 120,
                 7,
-                Map.of("people", 90),
-                List.of("ROOM")
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 90)),
+                        new ResourceRequirement("STAFF", 1, Map.of())
+                )
         );
 
         AllocationRequest matematika = new AllocationRequest(
@@ -137,8 +167,10 @@ public class Main {
                 LocalDateTime.of(2026, 7, 1, 15, 0),
                 120,
                 6,
-                Map.of("people", 20),
-                List.of("ROOM")
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 20)),
+                        new ResourceRequirement("STAFF", 1, Map.of())
+                )
         );
 
         return List.of(oop2, baze, algoritmi, vestacka, matematika);
@@ -159,15 +191,14 @@ public class Main {
             for (Allocation allocation : result.getAllocations()) {
                 System.out.println("- " + allocation.getRequest().getName());
 
-                System.out.print("  Dodeljeni resursi: ");
+                System.out.println("  Dodeljeni resursi:");
 
                 if (allocation.getAssignedResources() == null || allocation.getAssignedResources().isEmpty()) {
-                    System.out.println("nema");
+                    System.out.println("    nema");
                 } else {
                     for (Resource resource : allocation.getAssignedResources()) {
-                        System.out.print(resource.getName() + " ");
+                        System.out.println("    - " + resource.getName() + " [" + resource.getType() + "]");
                     }
-                    System.out.println();
                 }
 
                 System.out.println("  Termin: "
