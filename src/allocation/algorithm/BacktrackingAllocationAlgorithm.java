@@ -17,23 +17,48 @@ import java.util.Set;
 
 public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
 
+    private static final long DEFAULT_TIME_LIMIT_MS = 5000;
+
     private ConstraintValidator constraintValidator;
+    private long maxExecutionTimeMs;
+
+    private long exploredStates;
+    private boolean stoppedByTimeLimit;
 
     public BacktrackingAllocationAlgorithm() {
-        this(ConstraintValidator.defaultValidator());
+        this(ConstraintValidator.defaultValidator(), DEFAULT_TIME_LIMIT_MS);
+    }
+
+    public BacktrackingAllocationAlgorithm(long maxExecutionTimeMs) {
+        this(ConstraintValidator.defaultValidator(), maxExecutionTimeMs);
     }
 
     public BacktrackingAllocationAlgorithm(ConstraintValidator constraintValidator) {
+        this(constraintValidator, DEFAULT_TIME_LIMIT_MS);
+    }
+
+    public BacktrackingAllocationAlgorithm(
+            ConstraintValidator constraintValidator,
+            long maxExecutionTimeMs
+    ) {
         if (constraintValidator == null) {
             throw new IllegalArgumentException("ConstraintValidator ne sme biti null.");
         }
 
+        if (maxExecutionTimeMs <= 0) {
+            throw new IllegalArgumentException("Vremenski limit mora biti pozitivan.");
+        }
+
         this.constraintValidator = constraintValidator;
+        this.maxExecutionTimeMs = maxExecutionTimeMs;
     }
 
     @Override
     public AllocationResult allocate(List<Resource> resources, List<AllocationRequest> requests) {
         long startTime = System.currentTimeMillis();
+
+        exploredStates = 0;
+        stoppedByTimeLimit = false;
 
         List<AllocationRequest> sortedRequests = new ArrayList<>(requests);
 
@@ -50,10 +75,12 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
                 sortedRequests,
                 resources,
                 new ArrayList<>(),
-                bestSolution
+                bestSolution,
+                startTime
         );
 
         List<Allocation> bestAllocations = bestSolution.getAllocations();
+
         List<RejectedRequest> rejectedRequests = buildRejectedRequests(
                 sortedRequests,
                 resources,
@@ -69,7 +96,9 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
                 bestAllocations.size(),
                 rejectedRequests.size(),
                 endTime - startTime,
-                totalPriorityScore
+                totalPriorityScore,
+                exploredStates,
+                stoppedByTimeLimit
         );
 
         return new AllocationResult(
@@ -89,10 +118,24 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
             List<AllocationRequest> requests,
             List<Resource> resources,
             List<Allocation> currentAllocations,
-            BestSolution bestSolution
+            BestSolution bestSolution,
+            long startTime
     ) {
-        if (index == requests.size()) {
+        if (isTimeLimitExceeded(startTime)) {
+            stoppedByTimeLimit = true;
             bestSolution.tryUpdate(currentAllocations);
+            return;
+        }
+
+        exploredStates++;
+
+        /*
+         * Čuvamo najbolje rešenje i pre kraja pretrage.
+         * Ovo je važno ako se algoritam prekine zbog vremenskog limita.
+         */
+        bestSolution.tryUpdate(currentAllocations);
+
+        if (index == requests.size()) {
             return;
         }
 
@@ -109,6 +152,12 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
         );
 
         for (List<Resource> candidateResources : candidates) {
+            if (isTimeLimitExceeded(startTime)) {
+                stoppedByTimeLimit = true;
+                bestSolution.tryUpdate(currentAllocations);
+                return;
+            }
+
             Allocation allocation = new Allocation(
                     currentRequest,
                     candidateResources
@@ -121,21 +170,29 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
                     requests,
                     resources,
                     currentAllocations,
-                    bestSolution
+                    bestSolution,
+                    startTime
             );
 
             currentAllocations.remove(currentAllocations.size() - 1);
         }
 
-        // Opcija da se trenutni zahtev ne alocira.
-        // Ovo je bitno jer nekad preskakanje jednog zahteva može omogućiti bolje ukupno rešenje.
+        /*
+         * Opcija da se trenutni zahtev preskoči.
+         * Nekada preskakanje jednog zahteva omogućava bolji ukupan rezultat.
+         */
         backtrack(
                 index + 1,
                 requests,
                 resources,
                 currentAllocations,
-                bestSolution
+                bestSolution,
+                startTime
         );
+    }
+
+    private boolean isTimeLimitExceeded(long startTime) {
+        return System.currentTimeMillis() - startTime >= maxExecutionTimeMs;
     }
 
     private List<List<Resource>> generateCandidatesForRequest(

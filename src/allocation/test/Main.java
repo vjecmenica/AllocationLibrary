@@ -307,6 +307,8 @@ public class Main {
             System.out.println("Odbijeno: " + result.getStatistics().getRejectedRequests());
             System.out.println("Vreme izvršavanja: " + result.getStatistics().getExecutionTimeMs() + " ms");
             System.out.println("Ukupan prioritet alociranih zahteva: " + result.getStatistics().getTotalPriorityScore());
+            System.out.println("Broj obiđenih stanja: " + result.getStatistics().getExploredStates());
+            System.out.println("Prekinut zbog limita: " + result.getStatistics().isStoppedByLimit());
         }
     }
 }

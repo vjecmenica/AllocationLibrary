@@ -8,6 +8,9 @@ public class AllocationStatistics {
     private long executionTimeMs;
     private int totalPriorityScore;
 
+    private long exploredStates;
+    private boolean stoppedByLimit;
+
     public AllocationStatistics(
             int totalRequests,
             int allocatedRequests,
@@ -15,11 +18,33 @@ public class AllocationStatistics {
             long executionTimeMs,
             int totalPriorityScore
     ) {
+        this(
+                totalRequests,
+                allocatedRequests,
+                rejectedRequests,
+                executionTimeMs,
+                totalPriorityScore,
+                0,
+                false
+        );
+    }
+
+    public AllocationStatistics(
+            int totalRequests,
+            int allocatedRequests,
+            int rejectedRequests,
+            long executionTimeMs,
+            int totalPriorityScore,
+            long exploredStates,
+            boolean stoppedByLimit
+    ) {
         this.totalRequests = totalRequests;
         this.allocatedRequests = allocatedRequests;
         this.rejectedRequests = rejectedRequests;
         this.executionTimeMs = executionTimeMs;
         this.totalPriorityScore = totalPriorityScore;
+        this.exploredStates = exploredStates;
+        this.stoppedByLimit = stoppedByLimit;
     }
 
     public int getTotalRequests() {
@@ -40,5 +65,13 @@ public class AllocationStatistics {
 
     public int getTotalPriorityScore() {
         return totalPriorityScore;
+    }
+
+    public long getExploredStates() {
+        return exploredStates;
+    }
+
+    public boolean isStoppedByLimit() {
+        return stoppedByLimit;
     }
 }
