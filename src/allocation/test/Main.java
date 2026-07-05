@@ -1,8 +1,8 @@
 package allocation.test;
 
 import allocation.algorithm.AllocationAlgorithm;
-import allocation.algorithm.GreedyAllocationAlgorithm;
 import allocation.algorithm.BacktrackingAllocationAlgorithm;
+import allocation.algorithm.GreedyAllocationAlgorithm;
 import allocation.model.Allocation;
 import allocation.model.AllocationRequest;
 import allocation.model.AllocationResult;
@@ -19,20 +19,42 @@ import java.util.Map;
 public class Main {
 
     public static void main(String[] args) {
+        List<AllocationAlgorithm> algorithms = List.of(
+                new GreedyAllocationAlgorithm(),
+                new BacktrackingAllocationAlgorithm()
+        );
 
-//        List<Resource> resources = createTestResources();
-//        List<AllocationRequest> requests = createTestRequests();
-        List<Resource> resources = createGreedyTrapResources();
-        List<AllocationRequest> requests = createGreedyTrapRequests();
+        runScenario(
+                "SCENARIO 1 - Raspored ispita",
+                createExamResources(),
+                createExamRequests(),
+                algorithms
+        );
+
+        runScenario(
+                "SCENARIO 2 - Greedy trap",
+                createGreedyTrapResources(),
+                createGreedyTrapRequests(),
+                algorithms
+        );
+    }
+
+    private static void runScenario(
+            String scenarioName,
+            List<Resource> resources,
+            List<AllocationRequest> requests,
+            List<AllocationAlgorithm> algorithms
+    ) {
+        System.out.println();
+        System.out.println("##################################################");
+        System.out.println(scenarioName);
+        System.out.println("##################################################");
+        System.out.println();
 
         System.out.println("===== TEST PODACI =====");
         System.out.println("Broj resursa: " + resources.size());
         System.out.println("Broj zahteva: " + requests.size());
         System.out.println();
-
-        List<AllocationAlgorithm> algorithms = new ArrayList<>();
-        algorithms.add(new GreedyAllocationAlgorithm());
-        algorithms.add(new BacktrackingAllocationAlgorithm());
 
         for (AllocationAlgorithm algorithm : algorithms) {
             System.out.println("=================================");
@@ -52,7 +74,7 @@ public class Main {
         }
     }
 
-    private static List<Resource> createTestResources() {
+    private static List<Resource> createExamResources() {
         LocalDateTime dayStart = LocalDateTime.of(2026, 7, 1, 8, 0);
         LocalDateTime dayEnd = LocalDateTime.of(2026, 7, 1, 18, 0);
 
@@ -116,7 +138,7 @@ public class Main {
         );
     }
 
-    private static List<AllocationRequest> createTestRequests() {
+    private static List<AllocationRequest> createExamRequests() {
         AllocationRequest oop2 = new AllocationRequest(
                 "REQ1",
                 "Ispit iz OOP2",
