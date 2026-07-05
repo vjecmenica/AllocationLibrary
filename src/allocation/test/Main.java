@@ -37,6 +37,16 @@ public class Main {
                 createGreedyTrapRequests(),
                 algorithms
         );
+
+        runScenario(
+                "SCENARIO 3 - Backtracking time limit",
+                createTimeLimitResources(),
+                createTimeLimitRequests(),
+                List.of(
+                        new GreedyAllocationAlgorithm(),
+                        new BacktrackingAllocationAlgorithm(1)
+                )
+        );
     }
 
     private static void runScenario(
@@ -251,6 +261,50 @@ public class Main {
         );
 
         return List.of(maliIspit, velikiIspit);
+    }
+
+    private static List<Resource> createTimeLimitResources() {
+        LocalDateTime dayStart = LocalDateTime.of(2026, 7, 1, 8, 0);
+        LocalDateTime dayEnd = LocalDateTime.of(2026, 7, 1, 18, 0);
+
+        TimeWindow wholeDay = new TimeWindow(dayStart, dayEnd);
+
+        List<Resource> resources = new ArrayList<>();
+
+        for (int i = 1; i <= 10; i++) {
+            resources.add(
+                    new Resource(
+                            "ROOM_" + i,
+                            "Sala " + i,
+                            "ROOM",
+                            Map.of("people", 100),
+                            List.of(wholeDay)
+                    )
+            );
+        }
+
+        return resources;
+    }
+
+    private static List<AllocationRequest> createTimeLimitRequests() {
+        List<AllocationRequest> requests = new ArrayList<>();
+
+        for (int i = 1; i <= 10; i++) {
+            requests.add(
+                    new AllocationRequest(
+                            "REQ_LIMIT_" + i,
+                            "Ispit " + i,
+                            LocalDateTime.of(2026, 7, 1, 10, 0),
+                            120,
+                            11 - i,
+                            List.of(
+                                    new ResourceRequirement("ROOM", 1, Map.of("people", 30))
+                            )
+                    )
+            );
+        }
+
+        return requests;
     }
 
     private static void printResult(AllocationResult result) {
