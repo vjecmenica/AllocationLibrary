@@ -2,6 +2,7 @@ package allocation.test;
 
 import allocation.algorithm.AllocationAlgorithm;
 import allocation.algorithm.GreedyAllocationAlgorithm;
+import allocation.algorithm.BacktrackingAllocationAlgorithm;
 import allocation.model.Allocation;
 import allocation.model.AllocationRequest;
 import allocation.model.AllocationResult;
@@ -19,8 +20,10 @@ public class Main {
 
     public static void main(String[] args) {
 
-        List<Resource> resources = createTestResources();
-        List<AllocationRequest> requests = createTestRequests();
+//        List<Resource> resources = createTestResources();
+//        List<AllocationRequest> requests = createTestRequests();
+        List<Resource> resources = createGreedyTrapResources();
+        List<AllocationRequest> requests = createGreedyTrapRequests();
 
         System.out.println("===== TEST PODACI =====");
         System.out.println("Broj resursa: " + resources.size());
@@ -29,6 +32,7 @@ public class Main {
 
         List<AllocationAlgorithm> algorithms = new ArrayList<>();
         algorithms.add(new GreedyAllocationAlgorithm());
+        algorithms.add(new BacktrackingAllocationAlgorithm());
 
         for (AllocationAlgorithm algorithm : algorithms) {
             System.out.println("=================================");
@@ -174,6 +178,57 @@ public class Main {
         );
 
         return List.of(oop2, baze, algoritmi, vestacka, matematika);
+    }
+
+    private static List<Resource> createGreedyTrapResources() {
+        LocalDateTime dayStart = LocalDateTime.of(2026, 7, 1, 8, 0);
+        LocalDateTime dayEnd = LocalDateTime.of(2026, 7, 1, 18, 0);
+
+        TimeWindow wholeDay = new TimeWindow(dayStart, dayEnd);
+
+        Resource velikaSala = new Resource(
+                "R_BIG",
+                "Velika sala",
+                "ROOM",
+                Map.of("people", 100),
+                List.of(wholeDay)
+        );
+
+        Resource malaSala = new Resource(
+                "R_SMALL",
+                "Mala sala",
+                "ROOM",
+                Map.of("people", 30),
+                List.of(wholeDay)
+        );
+
+        return List.of(velikaSala, malaSala);
+    }
+
+    private static List<AllocationRequest> createGreedyTrapRequests() {
+        AllocationRequest maliIspit = new AllocationRequest(
+                "REQ_SMALL",
+                "Mali ispit",
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                120,
+                10,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 30))
+                )
+        );
+
+        AllocationRequest velikiIspit = new AllocationRequest(
+                "REQ_BIG",
+                "Veliki ispit",
+                LocalDateTime.of(2026, 7, 1, 10, 0),
+                120,
+                9,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 100))
+                )
+        );
+
+        return List.of(maliIspit, velikiIspit);
     }
 
     private static void printResult(AllocationResult result) {
