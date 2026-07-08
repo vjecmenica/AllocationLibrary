@@ -2,6 +2,7 @@ package allocation.test;
 
 import allocation.algorithm.AllocationAlgorithm;
 import allocation.algorithm.BacktrackingAllocationAlgorithm;
+import allocation.algorithm.CpSatAllocationAlgorithm;
 import allocation.algorithm.GreedyAllocationAlgorithm;
 import allocation.model.Allocation;
 import allocation.model.AllocationRequest;
@@ -21,7 +22,8 @@ public class Main {
     public static void main(String[] args) {
         List<AllocationAlgorithm> algorithms = List.of(
                 new GreedyAllocationAlgorithm(),
-                new BacktrackingAllocationAlgorithm()
+                new BacktrackingAllocationAlgorithm(),
+                new CpSatAllocationAlgorithm()
         );
 
         runScenario(
@@ -44,7 +46,8 @@ public class Main {
                 createTimeLimitRequests(),
                 List.of(
                         new GreedyAllocationAlgorithm(),
-                        new BacktrackingAllocationAlgorithm(1)
+                        new BacktrackingAllocationAlgorithm(1),
+                        new CpSatAllocationAlgorithm()
                 )
         );
     }

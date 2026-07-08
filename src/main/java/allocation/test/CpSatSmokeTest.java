@@ -45,6 +45,7 @@ public class CpSatSmokeTest {
         );
 
         CpSolver solver = new CpSolver();
+        solver.getParameters().setNumSearchWorkers(1);
 
         CpSolverStatus status = solver.solve(model);
 
