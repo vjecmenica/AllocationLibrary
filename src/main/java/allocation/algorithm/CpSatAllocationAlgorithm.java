@@ -23,6 +23,22 @@ import java.util.Set;
 
 public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
 
+    private static final double DEFAULT_MAX_TIME_IN_SECONDS = 5.0;
+
+    private double maxTimeInSeconds;
+
+    public CpSatAllocationAlgorithm() {
+        this(DEFAULT_MAX_TIME_IN_SECONDS);
+    }
+
+    public CpSatAllocationAlgorithm(double maxTimeInSeconds) {
+        if (maxTimeInSeconds <= 0) {
+            throw new IllegalArgumentException("Vremenski limit mora biti pozitivan.");
+        }
+
+        this.maxTimeInSeconds = maxTimeInSeconds;
+    }
+
     @Override
     public String getName() {
         return "CP-SAT";
@@ -54,6 +70,7 @@ public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
         addObjective(model, sortedRequests, accepted);
 
         CpSolver solver = new CpSolver();
+        solver.getParameters().setMaxTimeInSeconds(maxTimeInSeconds);
         solver.getParameters().setNumSearchWorkers(1);
 
         CpSolverStatus status = solver.solve(model);
@@ -76,13 +93,20 @@ public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
         long endTime = System.currentTimeMillis();
 
         int totalPriorityScore = calculateTotalPriorityScore(allocations);
+        double objectiveValue = getObjectiveValue(solver, status);
+        boolean stoppedByLimit = status == CpSolverStatus.FEASIBLE
+                || status == CpSolverStatus.UNKNOWN;
 
         AllocationStatistics statistics = new AllocationStatistics(
                 requests.size(),
                 allocations.size(),
                 rejectedRequests.size(),
                 endTime - startTime,
-                totalPriorityScore
+                totalPriorityScore,
+                0,
+                stoppedByLimit,
+                status.name(),
+                objectiveValue
         );
 
         return new AllocationResult(allocations, rejectedRequests, statistics);
@@ -366,6 +390,14 @@ public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
         }
 
         return sum;
+    }
+
+    private double getObjectiveValue(CpSolver solver, CpSolverStatus status) {
+        if (status == CpSolverStatus.OPTIMAL || status == CpSolverStatus.FEASIBLE) {
+            return solver.objectiveValue();
+        }
+
+        return 0;
     }
 
     private LinearArgument[] toArray(List<LinearArgument> variables) {

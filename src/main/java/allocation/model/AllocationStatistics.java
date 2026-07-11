@@ -10,6 +10,8 @@ public class AllocationStatistics {
 
     private long exploredStates;
     private boolean stoppedByLimit;
+    private String algorithmStatus;
+    private double objectiveValue;
 
     public AllocationStatistics(
             int totalRequests,
@@ -25,7 +27,9 @@ public class AllocationStatistics {
                 executionTimeMs,
                 totalPriorityScore,
                 0,
-                false
+                false,
+                null,
+                0
         );
     }
 
@@ -38,6 +42,30 @@ public class AllocationStatistics {
             long exploredStates,
             boolean stoppedByLimit
     ) {
+        this(
+                totalRequests,
+                allocatedRequests,
+                rejectedRequests,
+                executionTimeMs,
+                totalPriorityScore,
+                exploredStates,
+                stoppedByLimit,
+                null,
+                0
+        );
+    }
+
+    public AllocationStatistics(
+            int totalRequests,
+            int allocatedRequests,
+            int rejectedRequests,
+            long executionTimeMs,
+            int totalPriorityScore,
+            long exploredStates,
+            boolean stoppedByLimit,
+            String algorithmStatus,
+            double objectiveValue
+    ) {
         this.totalRequests = totalRequests;
         this.allocatedRequests = allocatedRequests;
         this.rejectedRequests = rejectedRequests;
@@ -45,6 +73,8 @@ public class AllocationStatistics {
         this.totalPriorityScore = totalPriorityScore;
         this.exploredStates = exploredStates;
         this.stoppedByLimit = stoppedByLimit;
+        this.algorithmStatus = algorithmStatus;
+        this.objectiveValue = objectiveValue;
     }
 
     public int getTotalRequests() {
@@ -73,5 +103,13 @@ public class AllocationStatistics {
 
     public boolean isStoppedByLimit() {
         return stoppedByLimit;
+    }
+
+    public String getAlgorithmStatus() {
+        return algorithmStatus;
+    }
+
+    public double getObjectiveValue() {
+        return objectiveValue;
     }
 }
