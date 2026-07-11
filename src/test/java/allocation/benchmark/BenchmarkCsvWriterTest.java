@@ -29,7 +29,7 @@ class BenchmarkCsvWriterTest {
                         8,
                         12,
                         42,
-                        5,
+                        5.25,
                         0,
                         false,
                         null,
@@ -44,7 +44,7 @@ class BenchmarkCsvWriterTest {
                         9,
                         11,
                         50,
-                        7,
+                        7.75,
                         0,
                         false,
                         "OPTIMAL",
@@ -62,6 +62,8 @@ class BenchmarkCsvWriterTest {
         );
         assertEquals(3, lines.size());
         assertTrue(lines.get(1).startsWith("\"Scenario, \"\"A\"\"\""));
+        assertTrue(lines.get(1).contains(",5.25,"));
+        assertTrue(lines.get(2).contains(",7.75,"));
         assertTrue(lines.get(2).contains("CP-SAT"));
     }
 }

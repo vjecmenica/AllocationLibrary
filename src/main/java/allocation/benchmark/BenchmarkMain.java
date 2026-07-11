@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class BenchmarkMain {
 
@@ -34,12 +35,29 @@ public class BenchmarkMain {
         Path outputPath = Path.of("target", "benchmark", "allocation-benchmark.csv");
         csvWriter.write(outputPath, allResults);
 
+        System.out.println(BenchmarkSummaryReport.fromResults(allResults).formatForConsole());
+
         System.out.println();
         System.out.println("CSV written to: " + outputPath.toAbsolutePath());
     }
 
     private static List<ScenarioGenerationConfig> createGenerationConfigs() {
         List<ScenarioGenerationConfig> configs = new ArrayList<>();
+
+        for (long seed : SEEDS) {
+            configs.add(
+                    new ScenarioGenerationConfig(
+                            "TINY-" + seed,
+                            8,
+                            8,
+                            seed,
+                            LocalDateTime.of(2026, 7, 9, 8, 0),
+                            4,
+                            0.35,
+                            0.15
+                    )
+            );
+        }
 
         for (long seed : SEEDS) {
             configs.add(
@@ -92,6 +110,10 @@ public class BenchmarkMain {
     private static BenchmarkConfiguration createBenchmarkConfiguration(
             ScenarioGenerationConfig generationConfig
     ) {
+        if (generationConfig.getResourceCount() == 8) {
+            return new BenchmarkConfiguration(3, 5000, 5.0);
+        }
+
         if (generationConfig.getResourceCount() >= 100) {
             return new BenchmarkConfiguration(3, 200, 5.0);
         }
@@ -114,7 +136,7 @@ public class BenchmarkMain {
                             + " | score="
                             + result.getTotalPriorityScore()
                             + " | medianTimeMs="
-                            + result.getExecutionTimeMs()
+                            + String.format(Locale.US, "%.3f", result.getExecutionTimeMs())
                             + " | stoppedByLimit="
                             + result.isStoppedByLimit()
                             + " | status="

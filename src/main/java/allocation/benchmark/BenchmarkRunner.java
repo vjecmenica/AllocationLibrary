@@ -62,18 +62,20 @@ public class BenchmarkRunner {
             Supplier<AllocationAlgorithm> algorithmSupplier
     ) {
         List<AllocationResult> runResults = new ArrayList<>();
-        List<Long> executionTimes = new ArrayList<>();
+        List<Double> executionTimes = new ArrayList<>();
 
         for (int i = 0; i < configuration.getRepetitions(); i++) {
             AllocationAlgorithm algorithm = algorithmSupplier.get();
 
+            long startTime = System.nanoTime();
             AllocationResult result = algorithm.allocate(
                     scenario.getResources(),
                     scenario.getRequests()
             );
+            long endTime = System.nanoTime();
 
             runResults.add(result);
-            executionTimes.add(result.getStatistics().getExecutionTimeMs());
+            executionTimes.add(toMilliseconds(endTime - startTime));
         }
 
         AllocationResult bestResult = chooseRepresentativeResult(runResults);
@@ -136,9 +138,9 @@ public class BenchmarkRunner {
         }
     }
 
-    private long median(List<Long> values) {
-        List<Long> sorted = new ArrayList<>(values);
-        sorted.sort(Long::compareTo);
+    private double median(List<Double> values) {
+        List<Double> sorted = new ArrayList<>(values);
+        sorted.sort(Double::compareTo);
 
         int middle = sorted.size() / 2;
 
@@ -146,6 +148,10 @@ public class BenchmarkRunner {
             return sorted.get(middle);
         }
 
-        return (sorted.get(middle - 1) + sorted.get(middle)) / 2;
+        return (sorted.get(middle - 1) + sorted.get(middle)) / 2.0;
+    }
+
+    private double toMilliseconds(long durationNanos) {
+        return durationNanos / 1_000_000.0;
     }
 }

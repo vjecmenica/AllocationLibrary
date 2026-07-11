@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BenchmarkRunnerTest {
 
@@ -52,6 +53,7 @@ class BenchmarkRunnerTest {
                     result.getRequestCount(),
                     result.getAllocatedRequests() + result.getRejectedRequests()
             );
+            assertTrue(result.getExecutionTimeMs() >= 0.0);
         }
     }
 

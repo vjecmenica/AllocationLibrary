@@ -10,7 +10,7 @@ public class BenchmarkResult {
     private int allocatedRequests;
     private int rejectedRequests;
     private int totalPriorityScore;
-    private long executionTimeMs;
+    private double executionTimeMs;
     private long exploredStates;
     private boolean stoppedByLimit;
     private String algorithmStatus;
@@ -25,7 +25,7 @@ public class BenchmarkResult {
             int allocatedRequests,
             int rejectedRequests,
             int totalPriorityScore,
-            long executionTimeMs,
+            double executionTimeMs,
             long exploredStates,
             boolean stoppedByLimit,
             String algorithmStatus,
@@ -78,7 +78,7 @@ public class BenchmarkResult {
         return totalPriorityScore;
     }
 
-    public long getExecutionTimeMs() {
+    public double getExecutionTimeMs() {
         return executionTimeMs;
     }
 
