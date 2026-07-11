@@ -1,5 +1,13 @@
 package allocation.benchmark;
 
+/**
+ * Result of one algorithm on one scenario after all benchmark repetitions.
+ *
+ * The solution-quality fields, such as score and allocated request count, come
+ * from the best result found across repetitions. The execution time is the
+ * median wall-clock duration of all repetitions, measured by BenchmarkRunner
+ * with System.nanoTime().
+ */
 public class BenchmarkResult {
 
     private String scenarioName;

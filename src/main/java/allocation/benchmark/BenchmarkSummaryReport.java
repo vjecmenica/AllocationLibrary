@@ -52,7 +52,7 @@ public class BenchmarkSummaryReport {
             builder.append(
                     String.format(
                             Locale.US,
-                            "%s | algorithm=%s | scenarios=%d | avgAllocated=%.2f | avgScore=%.2f | medianTimeMs=%.3f | stoppedByLimit=%d | status OPTIMAL/FEASIBLE/OTHER=%d/%d/%d",
+                            "%s | algorithm=%s | scenarios=%d | avgAllocated=%.2f | avgScore=%.2f | medianTimeMs=%.3f | stoppedByLimit=%d | status OPTIMAL/FEASIBLE/OTHER/N/A=%d/%d/%d/%d",
                             summary.getScenarioSize(),
                             summary.getAlgorithmName(),
                             summary.getScenarioCount(),
@@ -62,7 +62,8 @@ public class BenchmarkSummaryReport {
                             summary.getStoppedByLimitCount(),
                             summary.getOptimalStatusCount(),
                             summary.getFeasibleStatusCount(),
-                            summary.getOtherStatusCount()
+                            summary.getOtherStatusCount(),
+                            summary.getNotApplicableStatusCount()
                     )
             );
             builder.append(System.lineSeparator());
@@ -76,10 +77,11 @@ public class BenchmarkSummaryReport {
             builder.append(
                     String.format(
                             Locale.US,
-                            "%s | bestScoreScenarios=%d | tieBestScoreScenarios=%d",
+                            "%s | bestOrTiedScenarios=%d | exclusiveBestScenarios=%d | tiedBestScenarios=%d",
                             summary.getAlgorithmName(),
-                            summary.getBestScoreScenarioCount(),
-                            summary.getTieBestScoreScenarioCount()
+                            summary.getBestOrTiedScenarios(),
+                            summary.getExclusiveBestScenarios(),
+                            summary.getTiedBestScenarios()
                     )
             );
             builder.append(System.lineSeparator());
@@ -113,7 +115,8 @@ public class BenchmarkSummaryReport {
                             stoppedByLimitCount(groupResults),
                             statusCount(groupResults, "OPTIMAL"),
                             statusCount(groupResults, "FEASIBLE"),
-                            otherStatusCount(groupResults)
+                            otherStatusCount(groupResults),
+                            notApplicableStatusCount(groupResults)
                     )
             );
         }
@@ -157,10 +160,10 @@ public class BenchmarkSummaryReport {
 
             for (BenchmarkResult winner : winners) {
                 MutableBestScoreSummary summary = byAlgorithm.get(winner.getAlgorithmName());
-                summary.bestScoreScenarioCount++;
+                summary.bestOrTiedScenarioCount++;
 
                 if (tie) {
-                    summary.tieBestScoreScenarioCount++;
+                    summary.tiedBestScenarioCount++;
                 }
             }
         }
@@ -171,8 +174,8 @@ public class BenchmarkSummaryReport {
             summaries.add(
                     new BestScoreSummary(
                             summary.algorithmName,
-                            summary.bestScoreScenarioCount,
-                            summary.tieBestScoreScenarioCount
+                            summary.bestOrTiedScenarioCount,
+                            summary.tiedBestScenarioCount
                     )
             );
         }
@@ -281,6 +284,20 @@ public class BenchmarkSummaryReport {
         return count;
     }
 
+    private static int notApplicableStatusCount(List<BenchmarkResult> results) {
+        int count = 0;
+
+        for (BenchmarkResult result : results) {
+            String status = result.getAlgorithmStatus();
+
+            if (status == null || status.isBlank()) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     public static class GroupSummary {
 
         private String scenarioSize;
@@ -293,6 +310,7 @@ public class BenchmarkSummaryReport {
         private int optimalStatusCount;
         private int feasibleStatusCount;
         private int otherStatusCount;
+        private int notApplicableStatusCount;
 
         private GroupSummary(
                 String scenarioSize,
@@ -304,7 +322,8 @@ public class BenchmarkSummaryReport {
                 int stoppedByLimitCount,
                 int optimalStatusCount,
                 int feasibleStatusCount,
-                int otherStatusCount
+                int otherStatusCount,
+                int notApplicableStatusCount
         ) {
             this.scenarioSize = scenarioSize;
             this.algorithmName = algorithmName;
@@ -316,6 +335,7 @@ public class BenchmarkSummaryReport {
             this.optimalStatusCount = optimalStatusCount;
             this.feasibleStatusCount = feasibleStatusCount;
             this.otherStatusCount = otherStatusCount;
+            this.notApplicableStatusCount = notApplicableStatusCount;
         }
 
         public String getScenarioSize() {
@@ -357,42 +377,58 @@ public class BenchmarkSummaryReport {
         public int getOtherStatusCount() {
             return otherStatusCount;
         }
+
+        public int getNotApplicableStatusCount() {
+            return notApplicableStatusCount;
+        }
     }
 
     public static class BestScoreSummary {
 
         private String algorithmName;
-        private int bestScoreScenarioCount;
-        private int tieBestScoreScenarioCount;
+        private int bestOrTiedScenarios;
+        private int tiedBestScenarios;
 
         private BestScoreSummary(
                 String algorithmName,
-                int bestScoreScenarioCount,
-                int tieBestScoreScenarioCount
+                int bestOrTiedScenarios,
+                int tiedBestScenarios
         ) {
             this.algorithmName = algorithmName;
-            this.bestScoreScenarioCount = bestScoreScenarioCount;
-            this.tieBestScoreScenarioCount = tieBestScoreScenarioCount;
+            this.bestOrTiedScenarios = bestOrTiedScenarios;
+            this.tiedBestScenarios = tiedBestScenarios;
         }
 
         public String getAlgorithmName() {
             return algorithmName;
         }
 
+        public int getBestOrTiedScenarios() {
+            return bestOrTiedScenarios;
+        }
+
+        public int getExclusiveBestScenarios() {
+            return bestOrTiedScenarios - tiedBestScenarios;
+        }
+
+        public int getTiedBestScenarios() {
+            return tiedBestScenarios;
+        }
+
         public int getBestScoreScenarioCount() {
-            return bestScoreScenarioCount;
+            return getBestOrTiedScenarios();
         }
 
         public int getTieBestScoreScenarioCount() {
-            return tieBestScoreScenarioCount;
+            return getTiedBestScenarios();
         }
     }
 
     private static class MutableBestScoreSummary {
 
         private String algorithmName;
-        private int bestScoreScenarioCount;
-        private int tieBestScoreScenarioCount;
+        private int bestOrTiedScenarioCount;
+        private int tiedBestScenarioCount;
 
         private MutableBestScoreSummary(String algorithmName) {
             this.algorithmName = algorithmName;

@@ -35,6 +35,18 @@ class BenchmarkSummaryReportTest {
         assertEquals(0.85, cpSatSummary.getMedianExecutionTimeMs(), 0.0001);
         assertEquals(1, cpSatSummary.getOptimalStatusCount());
         assertEquals(1, cpSatSummary.getFeasibleStatusCount());
+        assertEquals(0, cpSatSummary.getOtherStatusCount());
+        assertEquals(0, cpSatSummary.getNotApplicableStatusCount());
+
+        BenchmarkSummaryReport.GroupSummary backtrackingSummary = report.getGroupSummaries()
+                .stream()
+                .filter(summary -> "TINY".equals(summary.getScenarioSize()))
+                .filter(summary -> "BACKTRACKING".equals(summary.getAlgorithmName()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(2, backtrackingSummary.getNotApplicableStatusCount());
+        assertEquals(0, backtrackingSummary.getOtherStatusCount());
 
         BenchmarkSummaryReport.BestScoreSummary backtrackingBest = report.getBestScoreSummaries()
                 .stream()
@@ -42,8 +54,9 @@ class BenchmarkSummaryReportTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(1, backtrackingBest.getBestScoreScenarioCount());
-        assertEquals(1, backtrackingBest.getTieBestScoreScenarioCount());
+        assertEquals(1, backtrackingBest.getBestOrTiedScenarios());
+        assertEquals(0, backtrackingBest.getExclusiveBestScenarios());
+        assertEquals(1, backtrackingBest.getTiedBestScenarios());
 
         BenchmarkSummaryReport.BestScoreSummary cpSatBest = report.getBestScoreSummaries()
                 .stream()
@@ -51,9 +64,15 @@ class BenchmarkSummaryReportTest {
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(2, cpSatBest.getBestScoreScenarioCount());
-        assertEquals(1, cpSatBest.getTieBestScoreScenarioCount());
-        assertTrue(report.formatForConsole().contains("BENCHMARK SUMMARY"));
+        assertEquals(2, cpSatBest.getBestOrTiedScenarios());
+        assertEquals(1, cpSatBest.getExclusiveBestScenarios());
+        assertEquals(1, cpSatBest.getTiedBestScenarios());
+
+        String consoleReport = report.formatForConsole();
+        assertTrue(consoleReport.contains("BENCHMARK SUMMARY"));
+        assertTrue(consoleReport.contains("status OPTIMAL/FEASIBLE/OTHER/N/A"));
+        assertTrue(consoleReport.contains("exclusiveBestScenarios"));
+        assertTrue(consoleReport.contains("tiedBestScenarios"));
     }
 
     private BenchmarkResult result(
