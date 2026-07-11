@@ -50,6 +50,13 @@ public class Main {
                         new CpSatAllocationAlgorithm()
                 )
         );
+
+        runScenario(
+                "SCENARIO 4 - Complex multi-resource optimization",
+                createComplexOptimizationResources(),
+                createComplexOptimizationRequests(),
+                algorithms
+        );
     }
 
     private static void runScenario(
@@ -308,6 +315,138 @@ public class Main {
         }
 
         return requests;
+    }
+
+    private static List<Resource> createComplexOptimizationResources() {
+        LocalDateTime dayStart = LocalDateTime.of(2026, 7, 2, 8, 0);
+        LocalDateTime dayEnd = LocalDateTime.of(2026, 7, 2, 18, 0);
+
+        TimeWindow wholeDay = new TimeWindow(dayStart, dayEnd);
+
+        Resource auditorium = new Resource(
+                "C_ROOM_BIG",
+                "Auditorium",
+                "ROOM",
+                Map.of("people", 120),
+                List.of(wholeDay)
+        );
+
+        Resource lab = new Resource(
+                "C_ROOM_LAB",
+                "Computer lab",
+                "ROOM",
+                Map.of("people", 40),
+                List.of(wholeDay)
+        );
+
+        Resource seminarRoom = new Resource(
+                "C_ROOM_SMALL",
+                "Seminar room",
+                "ROOM",
+                Map.of("people", 30),
+                List.of(wholeDay)
+        );
+
+        Resource assistantAna = new Resource(
+                "C_STAFF_ANA",
+                "Assistant Ana",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        Resource assistantBoris = new Resource(
+                "C_STAFF_BORIS",
+                "Assistant Boris",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        Resource assistantCeca = new Resource(
+                "C_STAFF_CECA",
+                "Assistant Ceca",
+                "STAFF",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        Resource projector = new Resource(
+                "C_PROJECTOR_1",
+                "Projector 1",
+                "PROJECTOR",
+                Map.of(),
+                List.of(wholeDay)
+        );
+
+        return List.of(
+                auditorium,
+                lab,
+                seminarRoom,
+                assistantAna,
+                assistantBoris,
+                assistantCeca,
+                projector
+        );
+    }
+
+    private static List<AllocationRequest> createComplexOptimizationRequests() {
+        AllocationRequest smallWorkshop = new AllocationRequest(
+                "C_REQ_SMALL_WORKSHOP",
+                "Small workshop",
+                LocalDateTime.of(2026, 7, 2, 10, 0),
+                120,
+                10,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 30)),
+                        new ResourceRequirement("STAFF", 1, Map.of())
+                )
+        );
+
+        AllocationRequest keynoteWithProjector = new AllocationRequest(
+                "C_REQ_KEYNOTE",
+                "Large keynote with projector",
+                LocalDateTime.of(2026, 7, 2, 10, 0),
+                120,
+                9,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 100)),
+                        new ResourceRequirement("STAFF", 1, Map.of()),
+                        new ResourceRequirement("PROJECTOR", 1, Map.of())
+                )
+        );
+
+        AllocationRequest labSession = new AllocationRequest(
+                "C_REQ_LAB_SESSION",
+                "Parallel lab session",
+                LocalDateTime.of(2026, 7, 2, 10, 0),
+                120,
+                8,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 40)),
+                        new ResourceRequirement("STAFF", 2, Map.of())
+                )
+        );
+
+        AllocationRequest afternoonDemo = new AllocationRequest(
+                "C_REQ_AFTERNOON_DEMO",
+                "Afternoon project demo",
+                LocalDateTime.of(2026, 7, 2, 13, 0),
+                90,
+                7,
+                List.of(
+                        new ResourceRequirement("ROOM", 1, Map.of("people", 30)),
+                        new ResourceRequirement("STAFF", 1, Map.of()),
+                        new ResourceRequirement("PROJECTOR", 1, Map.of())
+                )
+        );
+
+        return List.of(
+                smallWorkshop,
+                keynoteWithProjector,
+                labSession,
+                afternoonDemo
+        );
     }
 
     private static void printResult(AllocationResult result) {
