@@ -13,11 +13,11 @@ public class BenchmarkCsvWriter {
 
     public void write(Path outputPath, List<BenchmarkResult> results) throws IOException {
         if (outputPath == null) {
-            throw new IllegalArgumentException("Putanja CSV fajla ne sme biti null.");
+            throw new IllegalArgumentException("CSV file path must not be null.");
         }
 
         if (results == null) {
-            throw new IllegalArgumentException("Lista rezultata ne sme biti null.");
+            throw new IllegalArgumentException("Result list must not be null.");
         }
 
         Path parent = outputPath.getParent();

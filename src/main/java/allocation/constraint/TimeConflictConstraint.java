@@ -28,7 +28,7 @@ public class TimeConflictConstraint implements AllocationConstraint {
 
                 if (timeOverlaps) {
                     return ConstraintResult.violated(
-                            "Resurs '" + resource.getName() + "' je već zauzet u tom terminu."
+                            "Resource '" + resource.getName() + "' is already allocated during the requested time window."
                     );
                 }
             }

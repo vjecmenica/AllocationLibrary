@@ -42,11 +42,11 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
             long maxExecutionTimeMs
     ) {
         if (constraintValidator == null) {
-            throw new IllegalArgumentException("ConstraintValidator ne sme biti null.");
+            throw new IllegalArgumentException("ConstraintValidator must not be null.");
         }
 
         if (maxExecutionTimeMs <= 0) {
-            throw new IllegalArgumentException("Vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("Time limit must be positive.");
         }
 
         this.constraintValidator = constraintValidator;
@@ -130,8 +130,8 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
         exploredStates++;
 
         /*
-         * Čuvamo najbolje rešenje i pre kraja pretrage.
-         * Ovo je važno ako se algoritam prekine zbog vremenskog limita.
+         * Keep the best solution even before the search reaches the end.
+         * This matters if the algorithm is stopped by the time limit.
          */
         bestSolution.tryUpdate(currentAllocations);
 
@@ -178,8 +178,8 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
         }
 
         /*
-         * Opcija da se trenutni zahtev preskoči.
-         * Nekada preskakanje jednog zahteva omogućava bolji ukupan rezultat.
+         * Option to skip the current request.
+         * Sometimes skipping one request enables a better total result.
          */
         backtrack(
                 index + 1,
@@ -375,10 +375,10 @@ public class BacktrackingAllocationAlgorithm implements AllocationAlgorithm {
         );
 
         if (possibleCandidates.isEmpty()) {
-            return "Zahtev nije alociran jer u konačnom rasporedu ne postoji slobodan skup resursa koji zadovoljava sve njegove potrebe.";
+            return "Request was not allocated because no available set of resources in the final schedule satisfies all its requirements.";
         }
 
-        return "Zahtev nije alociran jer bi njegova alokacija smanjila ukupnu vrednost najboljeg pronađenog rešenja.";
+        return "Request was not allocated because allocating it would reduce the total value of the best found solution.";
     }
 
     private boolean containsResource(List<Resource> resources, Resource targetResource) {

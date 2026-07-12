@@ -24,27 +24,27 @@ public class ScenarioGenerationConfig {
             double projectorRequirementProbability
     ) {
         if (scenarioName == null || scenarioName.isBlank()) {
-            throw new IllegalArgumentException("Naziv scenarija ne sme biti prazan.");
+            throw new IllegalArgumentException("Scenario name must not be blank.");
         }
 
         if (resourceCount <= 0) {
-            throw new IllegalArgumentException("Broj resursa mora biti pozitivan.");
+            throw new IllegalArgumentException("Resource count must be positive.");
         }
 
         if (requestCount <= 0) {
-            throw new IllegalArgumentException("Broj zahteva mora biti pozitivan.");
+            throw new IllegalArgumentException("Request count must be positive.");
         }
 
         if (scenarioStart == null) {
-            throw new IllegalArgumentException("Pocetak scenarija ne sme biti null.");
+            throw new IllegalArgumentException("Scenario start must not be null.");
         }
 
         if (timeSlotCount <= 0) {
-            throw new IllegalArgumentException("Broj vremenskih slotova mora biti pozitivan.");
+            throw new IllegalArgumentException("Time slot count must be positive.");
         }
 
-        validateProbability(staffRequirementProbability, "Verovatnoca STAFF zahteva");
-        validateProbability(projectorRequirementProbability, "Verovatnoca PROJECTOR zahteva");
+        validateProbability(staffRequirementProbability, "STAFF requirement probability");
+        validateProbability(projectorRequirementProbability, "PROJECTOR requirement probability");
 
         this.scenarioName = scenarioName;
         this.resourceCount = resourceCount;
@@ -58,7 +58,7 @@ public class ScenarioGenerationConfig {
 
     private void validateProbability(double probability, String fieldName) {
         if (probability < 0.0 || probability > 1.0) {
-            throw new IllegalArgumentException(fieldName + " mora biti izmedju 0.0 i 1.0.");
+            throw new IllegalArgumentException(fieldName + " must be between 0.0 and 1.0.");
         }
     }
 

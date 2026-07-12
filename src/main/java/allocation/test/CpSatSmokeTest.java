@@ -18,10 +18,10 @@ public class CpSatSmokeTest {
         IntVar y = model.newBoolVar("y");
 
         /*
-         * Ograničenje:
+         * Constraint:
          * x + y <= 1
          *
-         * Znači ne mogu oba istovremeno biti 1.
+         * This means both variables cannot be 1 at the same time.
          */
         model.addLessOrEqual(
                 LinearExpr.sum(new IntVar[]{x, y}),
@@ -29,11 +29,11 @@ public class CpSatSmokeTest {
         );
 
         /*
-         * Cilj:
-         * Maksimizuj 10*x + 5*y
+         * Objective:
+         * Maximize 10*x + 5*y
          *
-         * Pošto x vredi 10, a y vredi 5,
-         * optimalno rešenje treba da bude:
+         * Since x is worth 10 and y is worth 5,
+         * the optimal solution should be:
          * x = 1
          * y = 0
          */

@@ -27,15 +27,15 @@ public class AllocationOptions {
             double cpSatTimeLimitSeconds
     ) {
         if (algorithmType == null) {
-            throw new IllegalArgumentException("Tip algoritma ne sme biti null.");
+            throw new IllegalArgumentException("Algorithm type must not be null.");
         }
 
         if (backtrackingTimeLimitMs <= 0) {
-            throw new IllegalArgumentException("Backtracking vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("Backtracking time limit must be positive.");
         }
 
         if (cpSatTimeLimitSeconds <= 0) {
-            throw new IllegalArgumentException("CP-SAT vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("CP-SAT time limit must be positive.");
         }
 
         this.algorithmType = algorithmType;

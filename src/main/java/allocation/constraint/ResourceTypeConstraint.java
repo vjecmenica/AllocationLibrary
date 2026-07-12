@@ -18,9 +18,9 @@ public class ResourceTypeConstraint implements AllocationConstraint {
     ) {
         if (!requirement.getResourceType().equals(resource.getType())) {
             return ConstraintResult.violated(
-                    "Resurs '" + resource.getName() + "' nije odgovarajućeg tipa. " +
-                            "Potreban tip: " + requirement.getResourceType() +
-                            ", tip resursa: " + resource.getType()
+                    "Resource '" + resource.getName() + "' has an incompatible type. " +
+                            "Required type: " + requirement.getResourceType() +
+                            ", resource type: " + resource.getType()
             );
         }
 

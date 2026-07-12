@@ -19,7 +19,7 @@ public class RandomScenarioGenerator {
 
     public GeneratedScenario generate(ScenarioGenerationConfig config) {
         if (config == null) {
-            throw new IllegalArgumentException("Konfiguracija generatora ne sme biti null.");
+            throw new IllegalArgumentException("Generator configuration must not be null.");
         }
 
         Random random = new Random(config.getSeed());

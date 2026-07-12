@@ -14,21 +14,21 @@ public class ResourceRequirement {
             Map<String, Integer> requiredCapacities
     ) {
         if (resourceType == null || resourceType.isBlank()) {
-            throw new IllegalArgumentException("Tip resursa ne sme biti prazan.");
+            throw new IllegalArgumentException("Resource type must not be blank.");
         }
 
         if (quantity <= 0) {
-            throw new IllegalArgumentException("Količina traženih resursa mora biti pozitivna.");
+            throw new IllegalArgumentException("Resource quantity must be positive.");
         }
 
         if (requiredCapacities != null) {
             for (Map.Entry<String, Integer> entry : requiredCapacities.entrySet()) {
                 if (entry.getKey() == null || entry.getKey().isBlank()) {
-                    throw new IllegalArgumentException("Naziv kapaciteta ne sme biti prazan.");
+                    throw new IllegalArgumentException("Capacity name must not be blank.");
                 }
 
                 if (entry.getValue() == null || entry.getValue() < 0) {
-                    throw new IllegalArgumentException("Vrednost kapaciteta ne sme biti negativna.");
+                    throw new IllegalArgumentException("Capacity value must not be negative.");
                 }
             }
         }

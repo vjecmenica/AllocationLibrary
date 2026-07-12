@@ -19,15 +19,15 @@ public class GeneratedScenario {
             List<AllocationRequest> requests
     ) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Naziv scenarija ne sme biti prazan.");
+            throw new IllegalArgumentException("Scenario name must not be blank.");
         }
 
         if (resources == null) {
-            throw new IllegalArgumentException("Lista resursa ne sme biti null.");
+            throw new IllegalArgumentException("Resource list must not be null.");
         }
 
         if (requests == null) {
-            throw new IllegalArgumentException("Lista zahteva ne sme biti null.");
+            throw new IllegalArgumentException("Request list must not be null.");
         }
 
         this.name = name;

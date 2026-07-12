@@ -25,7 +25,7 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
 
     public GreedyAllocationAlgorithm(ConstraintValidator constraintValidator) {
         if (constraintValidator == null) {
-            throw new IllegalArgumentException("ConstraintValidator ne sme biti null.");
+            throw new IllegalArgumentException("ConstraintValidator must not be null.");
         }
 
         this.constraintValidator = constraintValidator;
@@ -171,28 +171,28 @@ public class GreedyAllocationAlgorithm implements AllocationAlgorithm {
     ) {
         StringBuilder builder = new StringBuilder();
 
-        builder.append("Zahtev '")
+        builder.append("Request '")
                 .append(request.getName())
-                .append("' nije moguće alocirati. ");
+                .append("' cannot be allocated. ");
 
-        builder.append("Nije pronađeno dovoljno resursa za potrebu: tip=")
+        builder.append("Not enough resources found for requirement: type=")
                 .append(requirement.getResourceType())
-                .append(", potrebno=")
+                .append(", required=")
                 .append(requirement.getQuantity())
-                .append(", pronađeno=")
+                .append(", found=")
                 .append(foundCount)
                 .append(".");
 
         Map<String, Integer> requiredCapacities = requirement.getRequiredCapacities();
 
         if (requiredCapacities != null && !requiredCapacities.isEmpty()) {
-            builder.append(" Traženi kapaciteti: ")
+            builder.append(" Required capacities: ")
                     .append(requiredCapacities)
                     .append(".");
         }
 
         if (violationMessages != null && !violationMessages.isEmpty()) {
-            builder.append(" Primer razloga: ");
+            builder.append(" Example reason: ");
 
             int maxMessages = Math.min(3, violationMessages.size());
 

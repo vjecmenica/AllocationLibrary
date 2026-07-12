@@ -33,7 +33,7 @@ public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
 
     public CpSatAllocationAlgorithm(double maxTimeInSeconds) {
         if (maxTimeInSeconds <= 0) {
-            throw new IllegalArgumentException("Vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("Time limit must be positive.");
         }
 
         this.maxTimeInSeconds = maxTimeInSeconds;
@@ -376,10 +376,10 @@ public class CpSatAllocationAlgorithm implements AllocationAlgorithm {
 
     private String buildRejectionReason(CpSolverStatus status) {
         if (status != CpSolverStatus.OPTIMAL && status != CpSolverStatus.FEASIBLE) {
-            return "CP-SAT solver nije pronašao izvodljivo rešenje.";
+            return "CP-SAT solver did not find a feasible solution.";
         }
 
-        return "Zahtev nije alociran u optimalnom CP-SAT rešenju.";
+        return "Request was not allocated in the optimal CP-SAT solution.";
     }
 
     private int calculateTotalPriorityScore(List<Allocation> allocations) {

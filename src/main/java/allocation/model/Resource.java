@@ -19,15 +19,15 @@ public class Resource {
             List<TimeWindow> availability
     ) {
         if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("ID resursa ne sme biti prazan.");
+            throw new IllegalArgumentException("Resource ID must not be blank.");
         }
 
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Naziv resursa ne sme biti prazan.");
+            throw new IllegalArgumentException("Resource name must not be blank.");
         }
 
         if (type == null || type.isBlank()) {
-            throw new IllegalArgumentException("Tip resursa ne sme biti prazan.");
+            throw new IllegalArgumentException("Resource type must not be blank.");
         }
 
         this.id = id;

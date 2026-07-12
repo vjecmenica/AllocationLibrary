@@ -9,11 +9,11 @@ public class TimeWindow {
 
     public TimeWindow(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {
-            throw new IllegalArgumentException("Start i end ne smeju biti null.");
+            throw new IllegalArgumentException("Start and end time must not be null.");
         }
 
         if (!start.isBefore(end)) {
-            throw new IllegalArgumentException("Start mora biti pre end vremena.");
+            throw new IllegalArgumentException("Start time must be before end time.");
         }
 
         this.start = start;

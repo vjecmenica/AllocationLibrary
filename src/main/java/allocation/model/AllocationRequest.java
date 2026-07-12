@@ -20,23 +20,23 @@ public class AllocationRequest {
             List<ResourceRequirement> resourceRequirements
     ) {
         if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException("ID zahteva ne sme biti prazan.");
+            throw new IllegalArgumentException("Allocation request ID must not be blank.");
         }
 
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Naziv zahteva ne sme biti prazan.");
+            throw new IllegalArgumentException("Allocation request name must not be blank.");
         }
 
         if (startTime == null) {
-            throw new IllegalArgumentException("Vreme početka ne sme biti null.");
+            throw new IllegalArgumentException("Start time must not be null.");
         }
 
         if (durationMinutes <= 0) {
-            throw new IllegalArgumentException("Trajanje mora biti pozitivno.");
+            throw new IllegalArgumentException("Duration must be positive.");
         }
 
         if (resourceRequirements == null || resourceRequirements.isEmpty()) {
-            throw new IllegalArgumentException("Zahtev mora imati bar jednu potrebu za resursima.");
+            throw new IllegalArgumentException("Allocation request must have at least one resource requirement.");
         }
 
         this.id = id;

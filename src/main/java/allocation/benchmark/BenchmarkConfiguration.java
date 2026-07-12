@@ -12,15 +12,15 @@ public class BenchmarkConfiguration {
             double cpSatTimeLimitSeconds
     ) {
         if (repetitions <= 0) {
-            throw new IllegalArgumentException("Broj ponavljanja mora biti pozitivan.");
+            throw new IllegalArgumentException("Repetitions must be positive.");
         }
 
         if (backtrackingTimeLimitMs <= 0) {
-            throw new IllegalArgumentException("Backtracking vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("Backtracking time limit must be positive.");
         }
 
         if (cpSatTimeLimitSeconds <= 0) {
-            throw new IllegalArgumentException("CP-SAT vremenski limit mora biti pozitivan.");
+            throw new IllegalArgumentException("CP-SAT time limit must be positive.");
         }
 
         this.repetitions = repetitions;

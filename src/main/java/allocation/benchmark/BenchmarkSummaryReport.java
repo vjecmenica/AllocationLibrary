@@ -24,7 +24,7 @@ public class BenchmarkSummaryReport {
 
     public static BenchmarkSummaryReport fromResults(List<BenchmarkResult> results) {
         if (results == null) {
-            throw new IllegalArgumentException("Lista benchmark rezultata ne sme biti null.");
+            throw new IllegalArgumentException("Benchmark result list must not be null.");
         }
 
         return new BenchmarkSummaryReport(

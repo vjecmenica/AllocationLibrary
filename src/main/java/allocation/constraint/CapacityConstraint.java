@@ -31,9 +31,9 @@ public class CapacityConstraint implements AllocationConstraint {
 
             if (actualValue < requiredValue) {
                 return ConstraintResult.violated(
-                        "Resurs '" + resource.getName() + "' nema dovoljan kapacitet za '" +
-                                capacityName + "'. Potrebno: " + requiredValue +
-                                ", dostupno: " + actualValue
+                        "Resource '" + resource.getName() + "' does not have enough capacity for '" +
+                                capacityName + "'. Required: " + requiredValue +
+                                ", available: " + actualValue
                 );
             }
         }

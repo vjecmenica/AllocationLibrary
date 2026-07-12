@@ -13,7 +13,7 @@ public class ConstraintValidator {
 
     public ConstraintValidator(List<AllocationConstraint> constraints) {
         if (constraints == null || constraints.isEmpty()) {
-            throw new IllegalArgumentException("Lista constraint-a ne sme biti prazna.");
+            throw new IllegalArgumentException("Constraint list must not be empty.");
         }
 
         this.constraints = constraints;

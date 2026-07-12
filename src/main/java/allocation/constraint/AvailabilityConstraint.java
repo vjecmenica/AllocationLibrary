@@ -18,7 +18,7 @@ public class AvailabilityConstraint implements AllocationConstraint {
     ) {
         if (!resource.isAvailableFor(request.getTimeWindow())) {
             return ConstraintResult.violated(
-                    "Resurs '" + resource.getName() + "' nije dostupan u traženom terminu."
+                    "Resource '" + resource.getName() + "' is not available in the requested time window."
             );
         }
 

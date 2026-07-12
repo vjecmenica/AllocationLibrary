@@ -46,7 +46,7 @@ public class ResourceAllocator {
             case CP_SAT:
                 return new CpSatAllocationAlgorithm(options.getCpSatTimeLimitSeconds());
             default:
-                throw new IllegalArgumentException("Nepodrzan tip algoritma: " + options.getAlgorithmType());
+                throw new IllegalArgumentException("Unsupported algorithm type: " + options.getAlgorithmType());
         }
     }
 
@@ -56,15 +56,15 @@ public class ResourceAllocator {
             AllocationOptions options
     ) {
         if (resources == null) {
-            throw new IllegalArgumentException("Lista resursa ne sme biti null.");
+            throw new IllegalArgumentException("Resource list must not be null.");
         }
 
         if (requests == null) {
-            throw new IllegalArgumentException("Lista zahteva ne sme biti null.");
+            throw new IllegalArgumentException("Request list must not be null.");
         }
 
         if (options == null) {
-            throw new IllegalArgumentException("Opcije alokacije ne smeju biti null.");
+            throw new IllegalArgumentException("Allocation options must not be null.");
         }
 
         validateResources(resources);
@@ -76,11 +76,11 @@ public class ResourceAllocator {
 
         for (Resource resource : resources) {
             if (resource == null) {
-                throw new IllegalArgumentException("Lista resursa ne sme sadrzati null elemente.");
+                throw new IllegalArgumentException("Resource list must not contain null elements.");
             }
 
             if (!resourceIds.add(resource.getId())) {
-                throw new IllegalArgumentException("Resource id mora biti jedinstven: " + resource.getId());
+                throw new IllegalArgumentException("Resource ID must be unique: " + resource.getId());
             }
         }
     }
@@ -90,11 +90,11 @@ public class ResourceAllocator {
 
         for (AllocationRequest request : requests) {
             if (request == null) {
-                throw new IllegalArgumentException("Lista zahteva ne sme sadrzati null elemente.");
+                throw new IllegalArgumentException("Request list must not contain null elements.");
             }
 
             if (!requestIds.add(request.getId())) {
-                throw new IllegalArgumentException("AllocationRequest id mora biti jedinstven: " + request.getId());
+                throw new IllegalArgumentException("Allocation request ID must be unique: " + request.getId());
             }
         }
     }

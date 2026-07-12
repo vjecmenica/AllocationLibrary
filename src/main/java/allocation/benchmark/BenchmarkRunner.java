@@ -20,11 +20,11 @@ public class BenchmarkRunner {
             BenchmarkConfiguration configuration
     ) {
         if (scenario == null) {
-            throw new IllegalArgumentException("Scenario ne sme biti null.");
+            throw new IllegalArgumentException("Scenario must not be null.");
         }
 
         if (configuration == null) {
-            throw new IllegalArgumentException("Benchmark konfiguracija ne sme biti null.");
+            throw new IllegalArgumentException("Benchmark configuration must not be null.");
         }
 
         List<BenchmarkResult> results = new ArrayList<>();
@@ -133,7 +133,7 @@ public class BenchmarkRunner {
                     != result.getStatistics().getTotalPriorityScore()
                     || reference.getStatistics().getAllocatedRequests()
                     != result.getStatistics().getAllocatedRequests()) {
-                throw new IllegalStateException("Algoritam nije dao stabilan rezultat bez vremenskog limita.");
+                throw new IllegalStateException("Algorithm did not return a stable result without hitting the time limit.");
             }
         }
     }

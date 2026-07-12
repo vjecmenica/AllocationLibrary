@@ -27,7 +27,7 @@ public class Main {
         );
 
         runScenario(
-                "SCENARIO 1 - Raspored ispita",
+                "SCENARIO 1 - Exam scheduling",
                 createExamResources(),
                 createExamRequests(),
                 algorithms
@@ -71,21 +71,21 @@ public class Main {
         System.out.println("##################################################");
         System.out.println();
 
-        System.out.println("===== TEST PODACI =====");
-        System.out.println("Broj resursa: " + resources.size());
-        System.out.println("Broj zahteva: " + requests.size());
+        System.out.println("===== TEST DATA =====");
+        System.out.println("Resource count: " + resources.size());
+        System.out.println("Request count: " + requests.size());
         System.out.println();
 
         for (AllocationAlgorithm algorithm : algorithms) {
             System.out.println("=================================");
-            System.out.println("Algoritam: " + algorithm.getName());
+            System.out.println("Algorithm: " + algorithm.getName());
             System.out.println("=================================");
 
             try {
                 AllocationResult result = algorithm.allocate(resources, requests);
                 printResult(result);
             } catch (Exception e) {
-                System.out.println("Greška prilikom izvršavanja algoritma:");
+                System.out.println("Error while running algorithm:");
                 System.out.println(e.getMessage());
                 e.printStackTrace();
             }
@@ -451,30 +451,30 @@ public class Main {
 
     private static void printResult(AllocationResult result) {
         if (result == null) {
-            System.out.println("Rezultat je null. Verovatno algoritam još nije implementiran.");
+            System.out.println("Result is null. The algorithm is probably not implemented yet.");
             return;
         }
 
-        System.out.println("Uspešno alocirani zahtevi:");
+        System.out.println("Allocated requests:");
         System.out.println();
 
         if (result.getAllocations() == null || result.getAllocations().isEmpty()) {
-            System.out.println("Nema uspešno alociranih zahteva.");
+            System.out.println("No allocated requests.");
         } else {
             for (Allocation allocation : result.getAllocations()) {
                 System.out.println("- " + allocation.getRequest().getName());
 
-                System.out.println("  Dodeljeni resursi:");
+                System.out.println("  Assigned resources:");
 
                 if (allocation.getAssignedResources() == null || allocation.getAssignedResources().isEmpty()) {
-                    System.out.println("    nema");
+                    System.out.println("    none");
                 } else {
                     for (Resource resource : allocation.getAssignedResources()) {
                         System.out.println("    - " + resource.getName() + " [" + resource.getType() + "]");
                     }
                 }
 
-                System.out.println("  Termin: "
+                System.out.println("  Time window: "
                         + allocation.getRequest().getTimeWindow().getStart()
                         + " - "
                         + allocation.getRequest().getTimeWindow().getEnd());
@@ -483,35 +483,35 @@ public class Main {
             }
         }
 
-        System.out.println("Odbijeni zahtevi:");
+        System.out.println("Rejected requests:");
         System.out.println();
 
         if (result.getRejectedRequests() == null || result.getRejectedRequests().isEmpty()) {
-            System.out.println("Nema odbijenih zahteva.");
+            System.out.println("No rejected requests.");
         } else {
             for (RejectedRequest rejected : result.getRejectedRequests()) {
                 System.out.println("- " + rejected.getRequest().getName());
-                System.out.println("  Razlog: " + rejected.getReason());
+                System.out.println("  Reason: " + rejected.getReason());
                 System.out.println();
             }
         }
 
         if (result.getStatistics() != null) {
-            System.out.println("Statistika:");
-            System.out.println("Ukupno zahteva: " + result.getStatistics().getTotalRequests());
-            System.out.println("Alocirano: " + result.getStatistics().getAllocatedRequests());
-            System.out.println("Odbijeno: " + result.getStatistics().getRejectedRequests());
-            System.out.println("Vreme izvršavanja: " + result.getStatistics().getExecutionTimeMs() + " ms");
-            System.out.println("Ukupan prioritet alociranih zahteva: " + result.getStatistics().getTotalPriorityScore());
-            System.out.println("Broj obiđenih stanja: " + result.getStatistics().getExploredStates());
-            System.out.println("Prekinut zbog limita: " + result.getStatistics().isStoppedByLimit());
+            System.out.println("Statistics:");
+            System.out.println("Total requests: " + result.getStatistics().getTotalRequests());
+            System.out.println("Allocated: " + result.getStatistics().getAllocatedRequests());
+            System.out.println("Rejected: " + result.getStatistics().getRejectedRequests());
+            System.out.println("Execution time: " + result.getStatistics().getExecutionTimeMs() + " ms");
+            System.out.println("Total priority score of allocated requests: " + result.getStatistics().getTotalPriorityScore());
+            System.out.println("Explored states: " + result.getStatistics().getExploredStates());
+            System.out.println("Stopped by limit: " + result.getStatistics().isStoppedByLimit());
 
             if (result.getStatistics().getAlgorithmStatus() != null) {
-                System.out.println("Status algoritma: " + result.getStatistics().getAlgorithmStatus());
+                System.out.println("Algorithm status: " + result.getStatistics().getAlgorithmStatus());
             }
 
             if (result.getStatistics().getObjectiveValue() > 0) {
-                System.out.println("Vrednost ciljne funkcije: " + result.getStatistics().getObjectiveValue());
+                System.out.println("Objective value: " + result.getStatistics().getObjectiveValue());
             }
         }
     }
