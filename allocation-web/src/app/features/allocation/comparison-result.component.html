@@ -1,0 +1,54 @@
+@if (result; as comparison) {
+  <section class="result-panel">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Comparison result</p>
+        <h2>Best score {{ comparison.bestTotalPriorityScore }}</h2>
+      </div>
+      <div class="summary-note">
+        <strong>Fastest measured algorithm:</strong> {{ comparison.fastestAlgorithm }}
+        <span>Fastest only in this comparison run; not a general performance guarantee.</span>
+      </div>
+    </div>
+
+    <p class="best-list">
+      <strong>Best score algorithms:</strong> {{ comparison.bestScoreAlgorithms.join(', ') }}
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Algorithm</th>
+            <th>Total priority score</th>
+            <th>Allocated requests</th>
+            <th>Rejected requests</th>
+            <th>Measured execution time</th>
+            <th>Algorithm status</th>
+            <th>Stopped by limit</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (algorithm of algorithms; track algorithm) {
+            <tr [class.best-row]="isBestScore(algorithm)">
+              <td>
+                <strong>{{ algorithm }}</strong>
+                @if (isBestScore(algorithm)) {
+                  <span class="best-badge">Best score</span>
+                }
+              </td>
+              <td>{{ comparison.results[algorithm].allocationResult.statistics.totalPriorityScore }}</td>
+              <td>{{ comparison.results[algorithm].allocationResult.statistics.allocatedRequests }}</td>
+              <td>{{ comparison.results[algorithm].allocationResult.statistics.rejectedRequests }}</td>
+              <td>{{ comparison.results[algorithm].measuredExecutionTimeMs | number: '1.2-2' }} ms</td>
+              <td>{{ statusFor(algorithm) }}</td>
+              <td>
+                {{ comparison.results[algorithm].allocationResult.statistics.stoppedByLimit ? 'Yes' : 'No' }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+}

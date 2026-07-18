@@ -6,6 +6,7 @@ AllocationLibrary is a Java 17 Maven project for resource allocation experiments
 
 - `allocation-core`: core allocation models, constraints, algorithms, benchmark helpers, and the public library API.
 - `allocation-api`: Spring Boot REST API that exposes stateless allocation execution and comparison endpoints.
+- `allocation-web`: Angular frontend for running the sample allocation scenario through the REST API.
 
 ## Build
 
@@ -18,3 +19,22 @@ mvn clean test
 ## REST API
 
 See [docs/rest-api.md](docs/rest-api.md) for endpoint documentation and JSON examples.
+
+## Frontend
+
+Install and run the Angular development server:
+
+```bash
+cd allocation-web
+npm install
+npm start
+```
+
+The backend runs on [http://localhost:8080](http://localhost:8080/).
+The frontend development server runs on [http://localhost:4200](http://localhost:4200/).
+The Angular development proxy forwards `/api` requests to the backend.
+
+## Run Locally
+
+1. Start `allocation-api`.
+2. In another terminal, start `allocation-web`.

@@ -1,0 +1,104 @@
+@if (result; as execution) {
+  <section class="result-panel">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Allocation result</p>
+        <h2>{{ execution.executedAlgorithm }}</h2>
+      </div>
+      <span class="score">Score {{ execution.statistics.totalPriorityScore }}</span>
+    </div>
+
+    <dl class="summary-grid">
+      <div>
+        <dt>Selection mode</dt>
+        <dd>{{ execution.selectionMode }}</dd>
+      </div>
+      <div>
+        <dt>Requested algorithm</dt>
+        <dd>{{ valueOrNotApplicable(execution.requestedAlgorithm) }}</dd>
+      </div>
+      <div>
+        <dt>Executed algorithm</dt>
+        <dd>{{ execution.executedAlgorithm }}</dd>
+      </div>
+      <div>
+        <dt>Goal</dt>
+        <dd>{{ valueOrNotApplicable(execution.goal) }}</dd>
+      </div>
+      <div>
+        <dt>Measured execution time</dt>
+        <dd>{{ execution.measuredExecutionTimeMs | number: '1.2-2' }} ms</dd>
+      </div>
+      <div>
+        <dt>Allocated requests</dt>
+        <dd>{{ execution.statistics.allocatedRequests }}</dd>
+      </div>
+      <div>
+        <dt>Rejected requests</dt>
+        <dd>{{ execution.statistics.rejectedRequests }}</dd>
+      </div>
+      <div>
+        <dt>Algorithm status</dt>
+        <dd>{{ valueOrNotApplicable(execution.statistics.algorithmStatus) }}</dd>
+      </div>
+      <div>
+        <dt>Stopped by limit</dt>
+        <dd>{{ execution.statistics.stoppedByLimit ? 'Yes' : 'No' }}</dd>
+      </div>
+    </dl>
+
+    <p class="selection-reason">{{ execution.selectionReason }}</p>
+
+    <h3>Accepted allocations</h3>
+    @if (execution.allocations.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Request name</th>
+              <th>Assigned resources</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (allocation of execution.allocations; track allocation.request.id) {
+              <tr>
+                <td>{{ allocation.request.id }}</td>
+                <td>{{ allocation.request.name }}</td>
+                <td>{{ assignedResourceLabels(allocation.assignedResources) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty-state">No accepted allocations were returned.</p>
+    }
+
+    <h3>Rejected requests</h3>
+    @if (execution.rejectedRequests.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Request name</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (rejection of execution.rejectedRequests; track rejection.request.id) {
+              <tr>
+                <td>{{ rejection.request.id }}</td>
+                <td>{{ rejection.request.name }}</td>
+                <td>{{ rejection.reason }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty-state">No rejected requests were returned.</p>
+    }
+  </section>
+}

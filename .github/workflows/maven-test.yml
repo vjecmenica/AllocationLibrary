@@ -1,11 +1,11 @@
-name: Maven Test
+name: Project Test
 
 on:
   push:
   pull_request:
 
 jobs:
-  test:
+  backend:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,3 +21,29 @@ jobs:
 
       - name: Run Maven tests
         run: mvn -B clean test
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.3'
+          cache: npm
+          cache-dependency-path: allocation-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: allocation-web
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: allocation-web
+        run: npm run build
+
+      - name: Run frontend tests
+        working-directory: allocation-web
+        run: npm run test:ci

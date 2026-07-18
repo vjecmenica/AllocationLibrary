@@ -1,0 +1,127 @@
+<main class="page-shell">
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">AllocationLibrary</p>
+      <h1>Resource Allocation Console</h1>
+    </div>
+    <span class="health-pill" [ngClass]="healthClass()">{{ healthLabel() }}</span>
+  </header>
+
+  <section class="content-grid">
+    <article class="panel controls-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Sample Scenario: Greedy Trap</p>
+          <h2>Two rooms, two overlapping requests</h2>
+        </div>
+      </div>
+
+      <p class="scenario-copy">
+        Greedy can assign the large room to the small request, while Backtracking and CP-SAT can find a better total
+        allocation.
+      </p>
+
+      <div class="scenario-facts">
+        <div>
+          <strong>Resources</strong>
+          <span>R_BIG people 100</span>
+          <span>R_SMALL people 30</span>
+        </div>
+        <div>
+          <strong>Requests</strong>
+          <span>REQ_SMALL priority 10</span>
+          <span>REQ_BIG priority 9</span>
+        </div>
+      </div>
+
+      <div class="mode-control" role="group" aria-label="Allocation mode">
+        <button type="button" [class.active]="mode === 'EXPLICIT'" (click)="setMode('EXPLICIT')">EXPLICIT</button>
+        <button type="button" [class.active]="mode === 'AUTO'" (click)="setMode('AUTO')">AUTO</button>
+        <button type="button" [class.active]="mode === 'COMPARE'" (click)="setMode('COMPARE')">COMPARE</button>
+      </div>
+
+      <form class="settings-form" (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()">
+        @if (mode === 'EXPLICIT') {
+          <label>
+            Algorithm
+            <select name="algorithm" [(ngModel)]="selectedAlgorithm" data-testid="algorithm-select">
+              @for (algorithm of algorithms; track algorithm) {
+                <option [ngValue]="algorithm">{{ algorithm }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (mode === 'AUTO') {
+          <label>
+            Goal
+            <select name="goal" [(ngModel)]="selectedGoal" data-testid="goal-select">
+              @for (goal of goals; track goal) {
+                <option [ngValue]="goal">{{ goal }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        <div class="limit-grid">
+          <label>
+            Backtracking time limit in milliseconds
+            <input
+              type="number"
+              min="1"
+              name="backtrackingTimeLimitMs"
+              [(ngModel)]="backtrackingTimeLimitMs"
+              placeholder="Use backend default"
+            />
+          </label>
+          <label>
+            CP-SAT time limit in seconds
+            <input
+              type="number"
+              min="0.1"
+              step="0.1"
+              name="cpSatTimeLimitSeconds"
+              [(ngModel)]="cpSatTimeLimitSeconds"
+              placeholder="Use backend default"
+            />
+          </label>
+        </div>
+
+        @if (mode === 'COMPARE') {
+          <button type="submit" class="primary-action" [disabled]="isLoading">
+            {{ isLoading ? 'Comparing algorithms...' : 'Compare Algorithms' }}
+          </button>
+        } @else {
+          <button type="submit" class="primary-action" [disabled]="isLoading">
+            {{ isLoading ? 'Running allocation...' : 'Run Allocation' }}
+          </button>
+        }
+      </form>
+    </article>
+
+    <section class="panel output-panel" aria-live="polite">
+      @if (errorMessage) {
+        <div class="error-box">{{ errorMessage }}</div>
+      }
+
+      @if (!errorMessage && !executionResult && !comparisonResult && !isLoading) {
+        <div class="empty-output">
+          <h2>Ready</h2>
+          <p>Select a mode and run the sample scenario.</p>
+        </div>
+      }
+
+      @if (isLoading) {
+        <div class="loading-state">Waiting for API response...</div>
+      }
+
+      @if (executionResult) {
+        <app-execution-result [result]="executionResult" />
+      }
+
+      @if (comparisonResult) {
+        <app-comparison-result [result]="comparisonResult" />
+      }
+    </section>
+  </section>
+</main>
