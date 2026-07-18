@@ -196,7 +196,7 @@ If a time limit is omitted, the default from `allocation-core` is used.
 }
 ```
 
-### Successful Response Example
+### Abbreviated Successful Response Example
 
 ```json
 {
@@ -206,8 +206,6 @@ If a time limit is omitted, the default from `allocation-core` is used.
   "goal": null,
   "selectionReason": "CP-SAT was executed because the caller explicitly selected it.",
   "measuredExecutionTimeMs": 18.3421,
-  "allocations": [],
-  "rejectedRequests": [],
   "statistics": {
     "totalRequests": 2,
     "allocatedRequests": 2,
@@ -217,10 +215,12 @@ If a time limit is omitted, the default from `allocation-core` is used.
     "exploredStates": 0,
     "stoppedByLimit": false,
     "algorithmStatus": "OPTIMAL",
-    "objectiveValue": 93.0
+    "objectiveValue": 59.0
   }
 }
 ```
+
+The full response also includes complete `allocations` and `rejectedRequests` arrays.
 
 `measuredExecutionTimeMs` is measured by the public service layer around one algorithm call using high-resolution wall-clock timing.
 `statistics.algorithmExecutionTimeMs` is the existing integer millisecond value reported by the core algorithm statistics.
@@ -251,6 +251,20 @@ Runs `GREEDY`, `BACKTRACKING`, and `CP_SAT` on the same resources and requests.
           "end": "2026-07-01T18:00:00"
         }
       ]
+    },
+    {
+      "id": "R_SMALL",
+      "name": "Small room",
+      "type": "ROOM",
+      "capacities": {
+        "people": 30
+      },
+      "availability": [
+        {
+          "start": "2026-07-01T08:00:00",
+          "end": "2026-07-01T18:00:00"
+        }
+      ]
     }
   ],
   "requests": [
@@ -266,6 +280,22 @@ Runs `GREEDY`, `BACKTRACKING`, and `CP_SAT` on the same resources and requests.
           "quantity": 1,
           "requiredCapacities": {
             "people": 30
+          }
+        }
+      ]
+    },
+    {
+      "id": "REQ_BIG",
+      "name": "Large exam",
+      "startTime": "2026-07-01T10:00:00",
+      "durationMinutes": 120,
+      "priority": 9,
+      "resourceRequirements": [
+        {
+          "resourceType": "ROOM",
+          "quantity": 1,
+          "requiredCapacities": {
+            "people": 100
           }
         }
       ]
