@@ -38,6 +38,23 @@ class AllocationControllerTest {
     }
 
     @Test
+    void explicitBacktrackingAllocationReturnsExpectedResult() throws Exception {
+        postAllocation(allocationRequest("""
+                "selectionMode": "EXPLICIT",
+                "algorithm": "BACKTRACKING",
+                "backtrackingTimeLimitMs": 1000
+                """))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.selectionMode").value("EXPLICIT"))
+                .andExpect(jsonPath("$.requestedAlgorithm").value("BACKTRACKING"))
+                .andExpect(jsonPath("$.executedAlgorithm").value("BACKTRACKING"))
+                .andExpect(jsonPath("$.statistics.totalPriorityScore").value(19))
+                .andExpect(jsonPath("$.statistics.allocatedRequests").value(2))
+                .andExpect(jsonPath("$.statistics.rejectedRequests").value(0));
+    }
+
+    @Test
     void explicitCpSatAllocationReturnsOptimalResult() throws Exception {
         postAllocation(allocationRequest("""
                 "selectionMode": "EXPLICIT",
@@ -61,6 +78,22 @@ class AllocationControllerTest {
                 .andExpect(jsonPath("$.requestedAlgorithm").value(nullValue()))
                 .andExpect(jsonPath("$.executedAlgorithm").value("GREEDY"))
                 .andExpect(jsonPath("$.goal").value("FASTEST"));
+    }
+
+    @Test
+    void automaticBestQualityAllocationExecutesCpSat() throws Exception {
+        postAllocation(allocationRequest("""
+                "selectionMode": "AUTO",
+                "goal": "BEST_QUALITY",
+                "cpSatTimeLimitSeconds": 1.0
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.selectionMode").value("AUTO"))
+                .andExpect(jsonPath("$.requestedAlgorithm").value(nullValue()))
+                .andExpect(jsonPath("$.executedAlgorithm").value("CP_SAT"))
+                .andExpect(jsonPath("$.goal").value("BEST_QUALITY"))
+                .andExpect(jsonPath("$.statistics.totalPriorityScore").value(19))
+                .andExpect(jsonPath("$.statistics.algorithmStatus").value("OPTIMAL"));
     }
 
     @Test
@@ -109,9 +142,29 @@ class AllocationControllerTest {
     }
 
     @Test
+    void compareWithoutTimeLimitsUsesDefaults() throws Exception {
+        postCompare(compareRequestWithoutLimits())
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.results.GREEDY").exists())
+                .andExpect(jsonPath("$.results.BACKTRACKING").exists())
+                .andExpect(jsonPath("$.results.CP_SAT").exists())
+                .andExpect(jsonPath("$.bestTotalPriorityScore").value(19));
+    }
+
+    @Test
     void explicitAllocationWithoutAlgorithmReturnsBadRequest() throws Exception {
         expectBadAllocationRequest(allocationRequest("""
                 "selectionMode": "EXPLICIT"
+                """));
+    }
+
+    @Test
+    void explicitAllocationWithGoalReturnsBadRequest() throws Exception {
+        expectBadAllocationRequest(allocationRequest("""
+                "selectionMode": "EXPLICIT",
+                "algorithm": "GREEDY",
+                "goal": "FASTEST"
                 """));
     }
 
@@ -172,8 +225,73 @@ class AllocationControllerTest {
                 """.formatted(resourcesJson()));
     }
 
+    @Test
+    void emptyAllocationRequestBodyReturnsBadRequest() throws Exception {
+        expectBadAllocationRequest("");
+    }
+
+    @Test
+    void malformedAllocationJsonReturnsBadRequest() throws Exception {
+        expectBadAllocationRequest("{");
+    }
+
+    @Test
+    void invalidIsoDateReturnsBadRequest() throws Exception {
+        expectBadAllocationRequest(allocationRequestWithRequests(
+                requestsJson().replace("2026-07-01T10:00:00", "not-a-date")
+        ));
+    }
+
+    @Test
+    void compareWithNullResourcesReturnsBadRequest() throws Exception {
+        expectBadCompareRequest("""
+                {
+                  "resources": null,
+                  "requests": %s
+                }
+                """.formatted(requestsJson()));
+    }
+
+    @Test
+    void compareWithNullRequestsReturnsBadRequest() throws Exception {
+        expectBadCompareRequest("""
+                {
+                  "resources": %s,
+                  "requests": null
+                }
+                """.formatted(resourcesJson()));
+    }
+
+    @Test
+    void compareWithZeroBacktrackingLimitReturnsBadRequest() throws Exception {
+        expectBadCompareRequest("""
+                {
+                  "backtrackingTimeLimitMs": 0,
+                  "resources": %s,
+                  "requests": %s
+                }
+                """.formatted(resourcesJson(), requestsJson()));
+    }
+
+    @Test
+    void compareWithNegativeCpSatLimitReturnsBadRequest() throws Exception {
+        expectBadCompareRequest("""
+                {
+                  "cpSatTimeLimitSeconds": -1.0,
+                  "resources": %s,
+                  "requests": %s
+                }
+                """.formatted(resourcesJson(), requestsJson()));
+    }
+
     private ResultActions postAllocation(String json) throws Exception {
         return mockMvc.perform(post("/api/allocations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json));
+    }
+
+    private ResultActions postCompare(String json) throws Exception {
+        return mockMvc.perform(post("/api/allocations/compare")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json));
     }
@@ -188,6 +306,16 @@ class AllocationControllerTest {
                 .andExpect(jsonPath("$.path").value("/api/allocations"));
     }
 
+    private void expectBadCompareRequest(String json) throws Exception {
+        postCompare(json)
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.path").value("/api/allocations/compare"));
+    }
+
     private String allocationRequest(String modeFields) {
         return """
                 {
@@ -198,11 +326,31 @@ class AllocationControllerTest {
                 """.formatted(modeFields, resourcesJson(), requestsJson());
     }
 
+    private String allocationRequestWithRequests(String requests) {
+        return """
+                {
+                  "selectionMode": "EXPLICIT",
+                  "algorithm": "GREEDY",
+                  "resources": %s,
+                  "requests": %s
+                }
+                """.formatted(resourcesJson(), requests);
+    }
+
     private String compareRequest() {
         return """
                 {
                   "backtrackingTimeLimitMs": 1000,
                   "cpSatTimeLimitSeconds": 1.0,
+                  "resources": %s,
+                  "requests": %s
+                }
+                """.formatted(resourcesJson(), requestsJson());
+    }
+
+    private String compareRequestWithoutLimits() {
+        return """
+                {
                   "resources": %s,
                   "requests": %s
                 }
