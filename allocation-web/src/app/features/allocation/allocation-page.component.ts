@@ -13,18 +13,25 @@ import {
   AllocationComparisonApiResponse,
   AllocationGoal,
   ApiErrorResponse,
-  AllocationRequestDto,
-  ResourceDto,
 } from '../../core/models/allocation-api.models';
 import { ComparisonResultComponent } from './comparison-result.component';
 import { ExecutionResultComponent } from './execution-result.component';
+import { createGreedyTrapScenario } from './greedy-trap-scenario';
+import { ScenarioEditorComponent } from './scenario-editor/scenario-editor.component';
+import { AllocationScenario, ScenarioEditorState } from './scenario-editor/scenario-editor.models';
 
 type PageMode = 'EXPLICIT' | 'AUTO' | 'COMPARE';
 type HealthState = 'checking' | 'online' | 'unavailable';
 
 @Component({
   selector: 'app-allocation-page',
-  imports: [CommonModule, FormsModule, ExecutionResultComponent, ComparisonResultComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ExecutionResultComponent,
+    ComparisonResultComponent,
+    ScenarioEditorComponent,
+  ],
   templateUrl: './allocation-page.component.html',
   styleUrl: './allocation-page.component.scss',
 })
@@ -33,62 +40,6 @@ export class AllocationPageComponent implements OnInit {
 
   readonly algorithms: AllocationAlgorithmType[] = ['GREEDY', 'BACKTRACKING', 'CP_SAT'];
   readonly goals: AllocationGoal[] = ['FASTEST', 'BALANCED', 'BEST_QUALITY'];
-  readonly sampleResources: ResourceDto[] = [
-    {
-      id: 'R_BIG',
-      name: 'Large room',
-      type: 'ROOM',
-      capacities: { people: 100 },
-      availability: [
-        {
-          start: '2026-07-01T08:00:00',
-          end: '2026-07-01T18:00:00',
-        },
-      ],
-    },
-    {
-      id: 'R_SMALL',
-      name: 'Small room',
-      type: 'ROOM',
-      capacities: { people: 30 },
-      availability: [
-        {
-          start: '2026-07-01T08:00:00',
-          end: '2026-07-01T18:00:00',
-        },
-      ],
-    },
-  ];
-  readonly sampleRequests: AllocationRequestDto[] = [
-    {
-      id: 'REQ_SMALL',
-      name: 'Small exam',
-      startTime: '2026-07-01T10:00:00',
-      durationMinutes: 120,
-      priority: 10,
-      resourceRequirements: [
-        {
-          resourceType: 'ROOM',
-          quantity: 1,
-          requiredCapacities: { people: 30 },
-        },
-      ],
-    },
-    {
-      id: 'REQ_BIG',
-      name: 'Large exam',
-      startTime: '2026-07-01T10:00:00',
-      durationMinutes: 120,
-      priority: 9,
-      resourceRequirements: [
-        {
-          resourceType: 'ROOM',
-          quantity: 1,
-          requiredCapacities: { people: 100 },
-        },
-      ],
-    },
-  ];
 
   mode: PageMode = 'EXPLICIT';
   selectedAlgorithm: AllocationAlgorithmType = 'GREEDY';
@@ -100,6 +51,8 @@ export class AllocationPageComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly executionResult = signal<AllocationApiResponse | null>(null);
   readonly comparisonResult = signal<AllocationComparisonApiResponse | null>(null);
+  readonly currentScenario = signal<AllocationScenario>(createGreedyTrapScenario());
+  readonly scenarioValid = signal(true);
 
   ngOnInit(): void {
     this.allocationApi.getHealth().subscribe({
@@ -113,7 +66,7 @@ export class AllocationPageComponent implements OnInit {
   }
 
   runAllocation(): void {
-    if (this.isLoading()) {
+    if (this.isLoading() || !this.scenarioValid()) {
       return;
     }
 
@@ -122,9 +75,11 @@ export class AllocationPageComponent implements OnInit {
     this.startRequest();
     this.allocationApi
       .executeAllocation(request)
-      .pipe(finalize(() => {
-        this.isLoading.set(false);
-      }))
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        }),
+      )
       .subscribe({
         next: (response) => {
           this.executionResult.set(response);
@@ -136,7 +91,7 @@ export class AllocationPageComponent implements OnInit {
   }
 
   compareAlgorithms(): void {
-    if (this.isLoading()) {
+    if (this.isLoading() || !this.scenarioValid()) {
       return;
     }
 
@@ -145,9 +100,11 @@ export class AllocationPageComponent implements OnInit {
     this.startRequest();
     this.allocationApi
       .compareAllocations(request)
-      .pipe(finalize(() => {
-        this.isLoading.set(false);
-      }))
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        }),
+      )
       .subscribe({
         next: (response) => {
           this.comparisonResult.set(response);
@@ -163,6 +120,20 @@ export class AllocationPageComponent implements OnInit {
     this.errorMessage.set(null);
     this.executionResult.set(null);
     this.comparisonResult.set(null);
+  }
+
+  onScenarioChange(state: ScenarioEditorState): void {
+    this.errorMessage.set(null);
+    this.executionResult.set(null);
+    this.comparisonResult.set(null);
+
+    if (state.valid && state.scenario) {
+      this.currentScenario.set(state.scenario);
+      this.scenarioValid.set(true);
+      return;
+    }
+
+    this.scenarioValid.set(false);
   }
 
   healthLabel(): string {
@@ -189,10 +160,11 @@ export class AllocationPageComponent implements OnInit {
   }
 
   private createExecutionRequest(): AllocationApiRequest {
+    const scenario = this.currentScenario();
     const baseRequest = {
       ...this.optionalLimits(),
-      resources: this.sampleResources,
-      requests: this.sampleRequests,
+      resources: scenario.resources,
+      requests: scenario.requests,
     };
 
     if (this.mode === 'AUTO') {
@@ -211,10 +183,11 @@ export class AllocationPageComponent implements OnInit {
   }
 
   private createComparisonRequest(): AllocationComparisonApiRequest {
+    const scenario = this.currentScenario();
     return {
       ...this.optionalLimits(),
-      resources: this.sampleResources,
-      requests: this.sampleRequests,
+      resources: scenario.resources,
+      requests: scenario.requests,
     };
   }
 

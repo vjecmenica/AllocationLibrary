@@ -9,44 +9,39 @@
 
   <section class="content-grid">
     <article class="panel controls-panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Sample Scenario: Greedy Trap</p>
-          <h2>Two rooms, two overlapping requests</h2>
-        </div>
-      </div>
-
-      <p class="scenario-copy">
-        Greedy can assign the large room to the small request, while Backtracking and CP-SAT can find a better total
-        allocation.
-      </p>
-
-      <div class="scenario-facts">
-        <div>
-          <strong>Resources</strong>
-          <span>R_BIG people 100</span>
-          <span>R_SMALL people 30</span>
-        </div>
-        <div>
-          <strong>Requests</strong>
-          <span>REQ_SMALL priority 10</span>
-          <span>REQ_BIG priority 9</span>
-        </div>
-      </div>
+      <app-scenario-editor [disabled]="isLoading()" (scenarioChange)="onScenarioChange($event)" />
 
       <div class="mode-control" role="group" aria-label="Allocation mode">
-        <button type="button" [class.active]="mode === 'EXPLICIT'" [disabled]="isLoading()" (click)="setMode('EXPLICIT')">
+        <button
+          type="button"
+          [class.active]="mode === 'EXPLICIT'"
+          [disabled]="isLoading()"
+          (click)="setMode('EXPLICIT')"
+        >
           EXPLICIT
         </button>
-        <button type="button" [class.active]="mode === 'AUTO'" [disabled]="isLoading()" (click)="setMode('AUTO')">
+        <button
+          type="button"
+          [class.active]="mode === 'AUTO'"
+          [disabled]="isLoading()"
+          (click)="setMode('AUTO')"
+        >
           AUTO
         </button>
-        <button type="button" [class.active]="mode === 'COMPARE'" [disabled]="isLoading()" (click)="setMode('COMPARE')">
+        <button
+          type="button"
+          [class.active]="mode === 'COMPARE'"
+          [disabled]="isLoading()"
+          (click)="setMode('COMPARE')"
+        >
           COMPARE
         </button>
       </div>
 
-      <form class="settings-form" (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()">
+      <form
+        class="settings-form"
+        (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()"
+      >
         @if (mode === 'EXPLICIT') {
           <label>
             Algorithm
@@ -93,7 +88,9 @@
           </label>
         </div>
 
-        <button type="submit" class="primary-action" [disabled]="isLoading()">RUN</button>
+        <button type="submit" class="primary-action" [disabled]="isLoading() || !scenarioValid()">
+          RUN
+        </button>
       </form>
     </article>
 
@@ -105,7 +102,7 @@
       @if (!errorMessage() && !executionResult() && !comparisonResult() && !isLoading()) {
         <div class="empty-output">
           <h2>Ready</h2>
-          <p>Select a mode and run the sample scenario.</p>
+          <p>Edit the scenario, select a mode, and run the allocation.</p>
         </div>
       }
 

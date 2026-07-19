@@ -1,0 +1,270 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.scenario-editor,
+.editor-form,
+.entity-section,
+.entity-list,
+.entity-body,
+.nested-section,
+.required-capacities {
+  display: grid;
+}
+
+.scenario-editor,
+.editor-form {
+  gap: 16px;
+}
+
+.editor-toolbar,
+.entity-section-heading,
+.nested-heading,
+.requirement-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.editor-toolbar {
+  align-items: flex-start;
+  border-bottom: 1px solid #cfd5dc;
+  padding-bottom: 12px;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #5b6470;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.counts,
+.empty-list,
+.helper-text {
+  margin: 0;
+  color: #626b77;
+}
+
+.counts {
+  font-weight: 600;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+button {
+  border: 1px solid #aeb7c2;
+  border-radius: 0;
+  background: #ffffff;
+  color: #303844;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 7px 9px;
+}
+
+button:hover:not(:disabled) {
+  border-color: #1f5f99;
+  color: #174f80;
+}
+
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(31, 95, 153, 0.25);
+  outline-offset: 2px;
+}
+
+button:disabled,
+input:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.entity-section {
+  gap: 10px;
+}
+
+.entity-section-heading h2,
+.nested-heading h3,
+.requirement-heading h4,
+.compact-heading h4 {
+  margin: 0;
+  color: #20252d;
+  font-weight: 600;
+}
+
+.entity-section-heading h2 {
+  font-size: 1rem;
+}
+
+.nested-heading h3,
+.requirement-heading h4,
+.compact-heading h4 {
+  font-size: 0.88rem;
+}
+
+.entity-list {
+  gap: 8px;
+}
+
+.entity-editor {
+  border: 1px solid #cfd5dc;
+  background: #ffffff;
+}
+
+.entity-editor summary {
+  cursor: pointer;
+  background: #f3f5f7;
+  color: #303844;
+  font-weight: 600;
+  padding: 10px 12px;
+}
+
+.entity-editor[open] summary {
+  border-bottom: 1px solid #cfd5dc;
+}
+
+.entity-body {
+  gap: 12px;
+  padding: 12px;
+}
+
+label {
+  display: grid;
+  gap: 5px;
+  color: #3b434e;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #bfc7d0;
+  border-radius: 0;
+  background: #ffffff;
+  color: #20252d;
+  font: inherit;
+  font-weight: 400;
+  padding: 9px 10px;
+}
+
+input:focus-visible {
+  border-color: #1f5f99;
+}
+
+.nested-section {
+  gap: 10px;
+  border-top: 1px solid #d7dce2;
+  padding-top: 12px;
+}
+
+.nested-heading {
+  flex-wrap: wrap;
+}
+
+.number-row,
+.requirement-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.key-value-row,
+.time-window-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, 0.75fr) auto;
+  gap: 8px;
+  align-items: end;
+  border-top: 1px solid #e1e5ea;
+  padding-top: 10px;
+}
+
+.time-window-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.remove-button {
+  border-color: #d1a7a7;
+  color: #8b3232;
+  padding: 9px 8px;
+}
+
+.remove-entity {
+  justify-self: start;
+  border-color: #cf9999;
+  color: #8b3232;
+}
+
+.requirement-editor {
+  display: grid;
+  gap: 10px;
+  border-left: 3px solid #b8c5d2;
+  background: #f8f9fa;
+  padding: 10px;
+}
+
+.required-capacities {
+  gap: 10px;
+}
+
+.compact-heading {
+  align-items: center;
+}
+
+.empty-list,
+.helper-text {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.field-error,
+.section-error {
+  color: #9c2f2f;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.section-error {
+  margin: 0;
+  border-left: 3px solid #a43d3d;
+  background: #fff1f1;
+  padding: 7px 9px;
+}
+
+.row-error {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 620px) {
+  .editor-toolbar,
+  .entity-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .toolbar-actions {
+    justify-content: flex-start;
+  }
+
+  .number-row,
+  .requirement-fields,
+  .key-value-row,
+  .time-window-row {
+    grid-template-columns: 1fr;
+  }
+
+  .remove-button {
+    justify-self: start;
+  }
+}

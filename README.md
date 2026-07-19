@@ -34,6 +34,10 @@ The backend runs on [http://localhost:8080](http://localhost:8080/).
 The frontend development server runs on [http://localhost:4200](http://localhost:4200/).
 The Angular development proxy forwards `/api` requests to the backend.
 
+The frontend initially loads the Greedy Trap example. Resources and allocation requests can be edited directly in
+the scenario editor, and EXPLICIT, AUTO, and COMPARE all use the currently entered scenario. The scenario is kept
+only in memory for the current browser session.
+
 ## Run Locally
 
 1. Start `allocation-api`.

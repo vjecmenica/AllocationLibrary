@@ -1,0 +1,431 @@
+<section class="scenario-editor">
+  <header class="editor-toolbar">
+    <div>
+      <p class="eyebrow">Scenario Editor</p>
+      <p class="counts" data-testid="scenario-counts">
+        {{ resources.length }} resources / {{ requests.length }} requests
+      </p>
+    </div>
+    <div class="toolbar-actions">
+      <button type="button" data-testid="load-sample" [disabled]="disabled" (click)="loadSample()">
+        LOAD SAMPLE
+      </button>
+      <button type="button" data-testid="clear-scenario" [disabled]="disabled" (click)="clear()">
+        CLEAR
+      </button>
+    </div>
+  </header>
+
+  <form class="editor-form" [formGroup]="form">
+    <section class="entity-section" formArrayName="resources">
+      <div class="entity-section-heading">
+        <h2>Resources</h2>
+        <button
+          type="button"
+          data-testid="add-resource"
+          [disabled]="disabled"
+          (click)="addResource()"
+        >
+          ADD RESOURCE
+        </button>
+      </div>
+
+      @if (resources.length === 0) {
+        <p class="empty-list">No resources. Requests can still be submitted and rejected.</p>
+      }
+
+      <div class="entity-list">
+        @for (resource of resources.controls; track resource; let resourceIndex = $index) {
+          <details
+            class="entity-editor"
+            [formGroupName]="resourceIndex"
+            [open]="newResourceIndex === resourceIndex"
+          >
+            <summary>{{ resourceSummary(resource) }}</summary>
+            <div class="entity-body">
+              <label>
+                ID
+                <input
+                  type="text"
+                  formControlName="id"
+                  [attr.data-testid]="'resource-id-' + resourceIndex"
+                />
+                @if (fieldError(resource.controls.id, 'Resource ID'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <label>
+                Name
+                <input type="text" formControlName="name" />
+                @if (fieldError(resource.controls.name, 'Resource name'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <label>
+                Type
+                <input type="text" formControlName="type" />
+                @if (fieldError(resource.controls.type, 'Resource type'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <section class="nested-section" formArrayName="capacities">
+                <div class="nested-heading">
+                  <h3>Capacities</h3>
+                  <button
+                    type="button"
+                    [disabled]="disabled"
+                    [attr.data-testid]="'add-capacity-' + resourceIndex"
+                    (click)="addCapacity(resourceIndex)"
+                  >
+                    ADD CAPACITY
+                  </button>
+                </div>
+
+                @if (resource.controls.capacities.length === 0) {
+                  <p class="empty-list">No capacity limits.</p>
+                }
+
+                @for (
+                  capacity of resource.controls.capacities.controls;
+                  track capacity;
+                  let capacityIndex = $index
+                ) {
+                  <div class="key-value-row" [formGroupName]="capacityIndex">
+                    <label>
+                      Capacity name
+                      <input type="text" formControlName="name" />
+                      @if (fieldError(capacity.controls.name, 'Capacity name'); as error) {
+                        <span class="field-error">{{ error }}</span>
+                      }
+                    </label>
+                    <label>
+                      Capacity value
+                      <input type="number" min="0" step="1" formControlName="value" />
+                      @if (fieldError(capacity.controls.value, 'Capacity value'); as error) {
+                        <span class="field-error">{{ error }}</span>
+                      }
+                    </label>
+                    <button
+                      type="button"
+                      class="remove-button"
+                      [disabled]="disabled"
+                      [attr.aria-label]="'Remove capacity ' + (capacityIndex + 1)"
+                      (click)="removeCapacity(resourceIndex, capacityIndex)"
+                    >
+                      REMOVE
+                    </button>
+                  </div>
+                }
+
+                @if (
+                  duplicateError(
+                    resource.controls.capacities,
+                    'name',
+                    'Capacity names must be unique within a resource.'
+                  );
+                  as error
+                ) {
+                  <p class="section-error">{{ error }}</p>
+                }
+              </section>
+
+              <section class="nested-section" formArrayName="availability">
+                <div class="nested-heading">
+                  <h3>Availability</h3>
+                  <button
+                    type="button"
+                    [disabled]="disabled"
+                    [attr.data-testid]="'add-availability-' + resourceIndex"
+                    (click)="addAvailability(resourceIndex)"
+                  >
+                    ADD AVAILABILITY
+                  </button>
+                </div>
+
+                @if (resource.controls.availability.length === 0) {
+                  <p class="empty-list">
+                    No availability windows. This resource will be unavailable.
+                  </p>
+                }
+
+                @for (
+                  window of resource.controls.availability.controls;
+                  track window;
+                  let availabilityIndex = $index
+                ) {
+                  <div class="time-window-row" [formGroupName]="availabilityIndex">
+                    <label>
+                      Start
+                      <input type="datetime-local" step="60" formControlName="start" />
+                      @if (fieldError(window.controls.start, 'Availability start'); as error) {
+                        <span class="field-error">{{ error }}</span>
+                      }
+                    </label>
+                    <label>
+                      End
+                      <input type="datetime-local" step="60" formControlName="end" />
+                      @if (fieldError(window.controls.end, 'Availability end'); as error) {
+                        <span class="field-error">{{ error }}</span>
+                      }
+                    </label>
+                    <button
+                      type="button"
+                      class="remove-button"
+                      [disabled]="disabled"
+                      [attr.aria-label]="'Remove availability ' + (availabilityIndex + 1)"
+                      (click)="removeAvailability(resourceIndex, availabilityIndex)"
+                    >
+                      REMOVE
+                    </button>
+                    @if (timeWindowError(window); as error) {
+                      <p class="section-error row-error">{{ error }}</p>
+                    }
+                  </div>
+                }
+              </section>
+
+              <button
+                type="button"
+                class="remove-entity"
+                [disabled]="disabled"
+                [attr.data-testid]="'remove-resource-' + resourceIndex"
+                (click)="removeResource(resourceIndex)"
+              >
+                REMOVE RESOURCE
+              </button>
+            </div>
+          </details>
+        }
+      </div>
+
+      @if (duplicateError(resources, 'id', 'Resource IDs must be unique.'); as error) {
+        <p class="section-error">{{ error }}</p>
+      }
+    </section>
+
+    <section class="entity-section" formArrayName="requests">
+      <div class="entity-section-heading">
+        <h2>Allocation requests</h2>
+        <button
+          type="button"
+          data-testid="add-request"
+          [disabled]="disabled"
+          (click)="addRequest()"
+        >
+          ADD REQUEST
+        </button>
+      </div>
+
+      @if (requests.length === 0) {
+        <p class="empty-list">No allocation requests.</p>
+      }
+
+      <div class="entity-list">
+        @for (request of requests.controls; track request; let requestIndex = $index) {
+          <details
+            class="entity-editor"
+            [formGroupName]="requestIndex"
+            [open]="newRequestIndex === requestIndex"
+          >
+            <summary>{{ requestSummary(request) }}</summary>
+            <div class="entity-body">
+              <label>
+                ID
+                <input
+                  type="text"
+                  formControlName="id"
+                  [attr.data-testid]="'request-id-' + requestIndex"
+                />
+                @if (fieldError(request.controls.id, 'Request ID'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <label>
+                Name
+                <input type="text" formControlName="name" />
+                @if (fieldError(request.controls.name, 'Request name'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <label>
+                Start time
+                <input type="datetime-local" step="60" formControlName="startTime" />
+                @if (fieldError(request.controls.startTime, 'Start time'); as error) {
+                  <span class="field-error">{{ error }}</span>
+                }
+              </label>
+
+              <div class="number-row">
+                <label>
+                  Duration in minutes
+                  <input type="number" min="1" step="1" formControlName="durationMinutes" />
+                  @if (fieldError(request.controls.durationMinutes, 'Duration'); as error) {
+                    <span class="field-error">{{ error }}</span>
+                  }
+                </label>
+                <label>
+                  Priority
+                  <input type="number" step="1" formControlName="priority" />
+                  @if (fieldError(request.controls.priority, 'Priority'); as error) {
+                    <span class="field-error">{{ error }}</span>
+                  }
+                </label>
+              </div>
+
+              <section class="nested-section" formArrayName="resourceRequirements">
+                <div class="nested-heading">
+                  <div>
+                    <h3>Resource requirements</h3>
+                    <p class="helper-text">Resource types must match exactly.</p>
+                  </div>
+                  <button
+                    type="button"
+                    [disabled]="disabled"
+                    [attr.data-testid]="'add-requirement-' + requestIndex"
+                    (click)="addRequirement(requestIndex)"
+                  >
+                    ADD REQUIREMENT
+                  </button>
+                </div>
+
+                @for (
+                  requirement of request.controls.resourceRequirements.controls;
+                  track requirement;
+                  let requirementIndex = $index
+                ) {
+                  <section class="requirement-editor" [formGroupName]="requirementIndex">
+                    <div class="requirement-heading">
+                      <h4>Requirement {{ requirementIndex + 1 }}</h4>
+                      <button
+                        type="button"
+                        class="remove-button"
+                        [disabled]="disabled"
+                        (click)="removeRequirement(requestIndex, requirementIndex)"
+                      >
+                        REMOVE
+                      </button>
+                    </div>
+
+                    <div class="requirement-fields">
+                      <label>
+                        Resource type
+                        <input type="text" formControlName="resourceType" />
+                        @if (
+                          fieldError(requirement.controls.resourceType, 'Resource type');
+                          as error
+                        ) {
+                          <span class="field-error">{{ error }}</span>
+                        }
+                      </label>
+                      <label>
+                        Quantity
+                        <input type="number" min="1" step="1" formControlName="quantity" />
+                        @if (fieldError(requirement.controls.quantity, 'Quantity'); as error) {
+                          <span class="field-error">{{ error }}</span>
+                        }
+                      </label>
+                    </div>
+
+                    <div class="required-capacities" formArrayName="requiredCapacities">
+                      <div class="nested-heading compact-heading">
+                        <h4>Required capacities</h4>
+                        <button
+                          type="button"
+                          [disabled]="disabled"
+                          (click)="addRequiredCapacity(requestIndex, requirementIndex)"
+                        >
+                          ADD REQUIRED CAPACITY
+                        </button>
+                      </div>
+
+                      @if (requirement.controls.requiredCapacities.length === 0) {
+                        <p class="empty-list">No required capacities.</p>
+                      }
+
+                      @for (
+                        capacity of requirement.controls.requiredCapacities.controls;
+                        track capacity;
+                        let capacityIndex = $index
+                      ) {
+                        <div class="key-value-row" [formGroupName]="capacityIndex">
+                          <label>
+                            Capacity name
+                            <input type="text" formControlName="name" />
+                            @if (fieldError(capacity.controls.name, 'Capacity name'); as error) {
+                              <span class="field-error">{{ error }}</span>
+                            }
+                          </label>
+                          <label>
+                            Required value
+                            <input type="number" min="0" step="1" formControlName="value" />
+                            @if (fieldError(capacity.controls.value, 'Required value'); as error) {
+                              <span class="field-error">{{ error }}</span>
+                            }
+                          </label>
+                          <button
+                            type="button"
+                            class="remove-button"
+                            [disabled]="disabled"
+                            [attr.aria-label]="'Remove required capacity ' + (capacityIndex + 1)"
+                            (click)="
+                              removeRequiredCapacity(requestIndex, requirementIndex, capacityIndex)
+                            "
+                          >
+                            REMOVE
+                          </button>
+                        </div>
+                      }
+
+                      @if (
+                        duplicateError(
+                          requirement.controls.requiredCapacities,
+                          'name',
+                          'Required capacity names must be unique within a requirement.'
+                        );
+                        as error
+                      ) {
+                        <p class="section-error">{{ error }}</p>
+                      }
+                    </div>
+                  </section>
+                }
+
+                @if (
+                  collectionError(
+                    request.controls.resourceRequirements,
+                    'Each request must have at least one requirement.'
+                  );
+                  as error
+                ) {
+                  <p class="section-error">{{ error }}</p>
+                }
+              </section>
+
+              <button
+                type="button"
+                class="remove-entity"
+                [disabled]="disabled"
+                [attr.data-testid]="'remove-request-' + requestIndex"
+                (click)="removeRequest(requestIndex)"
+              >
+                REMOVE REQUEST
+              </button>
+            </div>
+          </details>
+        }
+      </div>
+
+      @if (duplicateError(requests, 'id', 'Request IDs must be unique.'); as error) {
+        <p class="section-error">{{ error }}</p>
+      }
+      @if (collectionError(requests, 'Add at least one request to run allocation.'); as error) {
+        <p class="section-error">{{ error }}</p>
+      }
+    </section>
+  </form>
+</section>

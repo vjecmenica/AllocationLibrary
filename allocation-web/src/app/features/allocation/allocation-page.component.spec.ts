@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AllocationApiService } from '../../core/api/allocation-api.service';
@@ -9,6 +10,8 @@ import {
   AllocationComparisonApiResponse,
 } from '../../core/models/allocation-api.models';
 import { AllocationPageComponent } from './allocation-page.component';
+import { ScenarioEditorComponent } from './scenario-editor/scenario-editor.component';
+import { AllocationScenario } from './scenario-editor/scenario-editor.models';
 
 describe('AllocationPageComponent', () => {
   let fixture: ComponentFixture<AllocationPageComponent>;
@@ -99,6 +102,70 @@ describe('AllocationPageComponent', () => {
     );
   });
 
+  it('should execute with a valid scenario emitted by the editor', () => {
+    const scenario = editedScenario();
+    emitScenario(scenario);
+
+    clickPrimaryAction();
+
+    expect(allocationApiService.executeAllocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resources: scenario.resources,
+        requests: scenario.requests,
+      }),
+    );
+  });
+
+  it('should compare with the same valid scenario emitted by the editor', () => {
+    const scenario = editedScenario();
+    emitScenario(scenario);
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+
+    clickPrimaryAction();
+
+    expect(allocationApiService.compareAllocations).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resources: scenario.resources,
+        requests: scenario.requests,
+      }),
+    );
+  });
+
+  it('should disable RUN for an invalid scenario and enable it when valid again', async () => {
+    scenarioEditor().scenarioChange.emit({ valid: false, scenario: null });
+    await fixture.whenStable();
+
+    expect(primaryAction().disabled).toBe(true);
+
+    emitScenario(editedScenario());
+    await fixture.whenStable();
+
+    expect(primaryAction().disabled).toBe(false);
+  });
+
+  it('should clear an execution result when the scenario changes', () => {
+    clickPrimaryAction();
+    fixture.detectChanges();
+    expect(component.executionResult()).not.toBeNull();
+
+    emitScenario(editedScenario());
+
+    expect(component.executionResult()).toBeNull();
+  });
+
+  it('should clear a comparison result when the scenario changes', () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+    clickPrimaryAction();
+    fixture.detectChanges();
+    expect(component.comparisonResult()).not.toBeNull();
+
+    emitScenario(editedScenario());
+
+    expect(component.comparisonResult()).toBeNull();
+  });
+
   it('should execute an AUTO request when RUN is clicked in auto mode', () => {
     component.setMode('AUTO');
     fixture.detectChanges();
@@ -139,6 +206,23 @@ describe('AllocationPageComponent', () => {
     await fixture.whenStable();
   });
 
+  it('should disable the scenario editor while an API request is loading', async () => {
+    const responseSubject = new Subject<AllocationApiResponse>();
+    allocationApiService.executeAllocation.mockReturnValueOnce(responseSubject.asObservable());
+
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(scenarioEditor().disabled).toBe(true);
+    expect(scenarioEditor().form.disabled).toBe(true);
+
+    responseSubject.next(executionResponse());
+    responseSubject.complete();
+    await fixture.whenStable();
+
+    expect(scenarioEditor().disabled).toBe(false);
+  });
+
   it('should display executed algorithm after a successful execution response', () => {
     clickPrimaryAction();
     fixture.detectChanges();
@@ -155,21 +239,26 @@ describe('AllocationPageComponent', () => {
 
   it('should display backend ApiErrorResponse message', () => {
     allocationApiService.executeAllocation.mockReturnValueOnce(
-      throwError(() => new HttpErrorResponse({
-        status: 400,
-        error: {
-          status: 400,
-          error: 'Bad Request',
-          message: 'Algorithm must not be null for explicit selection.',
-          path: '/api/allocations',
-        },
-      })),
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: {
+              status: 400,
+              error: 'Bad Request',
+              message: 'Algorithm must not be null for explicit selection.',
+              path: '/api/allocations',
+            },
+          }),
+      ),
     );
 
     clickPrimaryAction();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Algorithm must not be null for explicit selection.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Algorithm must not be null for explicit selection.',
+    );
   });
 
   it('should display all algorithms after a successful comparison response', () => {
@@ -196,9 +285,9 @@ describe('AllocationPageComponent', () => {
 
     expect(rows).toHaveLength(3);
     expect(rowFor('GREEDY')?.querySelector('.best-badge')).toBeNull();
-    expect(
-      rowFor('BACKTRACKING')?.querySelector('.best-badge')?.textContent?.trim(),
-    ).toBe('Best score');
+    expect(rowFor('BACKTRACKING')?.querySelector('.best-badge')?.textContent?.trim()).toBe(
+      'Best score',
+    );
     expect(rowFor('CP_SAT')?.querySelector('.best-badge')?.textContent?.trim()).toBe('Best score');
   });
 
@@ -309,19 +398,23 @@ describe('AllocationPageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('Waiting for API response...');
 
-    responseSubject.error(new HttpErrorResponse({
-      status: 400,
-      error: {
+    responseSubject.error(
+      new HttpErrorResponse({
         status: 400,
-        error: 'Bad Request',
-        message: 'Algorithm must not be null for explicit selection.',
-        path: '/api/allocations',
-      },
-    }));
+        error: {
+          status: 400,
+          error: 'Bad Request',
+          message: 'Algorithm must not be null for explicit selection.',
+          path: '/api/allocations',
+        },
+      }),
+    );
     await fixture.whenStable();
 
     expect(fixture.nativeElement.textContent).not.toContain('Waiting for API response...');
-    expect(fixture.nativeElement.textContent).toContain('Algorithm must not be null for explicit selection.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Algorithm must not be null for explicit selection.',
+    );
     expect(component.isLoading()).toBe(false);
     expect(component.errorMessage()).toBe('Algorithm must not be null for explicit selection.');
   });
@@ -356,6 +449,14 @@ describe('AllocationPageComponent', () => {
     return query('.primary-action') as HTMLButtonElement;
   }
 
+  function scenarioEditor(): ScenarioEditorComponent {
+    return fixture.debugElement.query(By.directive(ScenarioEditorComponent)).componentInstance;
+  }
+
+  function emitScenario(scenario: AllocationScenario): void {
+    scenarioEditor().scenarioChange.emit({ valid: true, scenario });
+  }
+
   async function changeNumberInput(name: string, value: string): Promise<void> {
     const input = query(`input[name="${name}"]`) as HTMLInputElement;
     input.value = value;
@@ -364,6 +465,41 @@ describe('AllocationPageComponent', () => {
     await fixture.whenStable();
   }
 });
+
+function editedScenario(): AllocationScenario {
+  return {
+    resources: [
+      {
+        id: 'R_EDITED',
+        name: 'Edited room',
+        type: 'ROOM',
+        capacities: { people: 40 },
+        availability: [
+          {
+            start: '2026-08-01T08:00:00',
+            end: '2026-08-01T18:00:00',
+          },
+        ],
+      },
+    ],
+    requests: [
+      {
+        id: 'REQ_EDITED',
+        name: 'Edited request',
+        startTime: '2026-08-01T10:00:00',
+        durationMinutes: 60,
+        priority: 7,
+        resourceRequirements: [
+          {
+            resourceType: 'ROOM',
+            quantity: 1,
+            requiredCapacities: { people: 20 },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 function executionResponse(): AllocationApiResponse {
   return {
