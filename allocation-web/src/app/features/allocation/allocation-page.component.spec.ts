@@ -129,6 +129,60 @@ describe('AllocationPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('CP_SAT');
   });
 
+  it('should send changed backtracking numeric limit in comparison request', async () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+
+    await changeNumberInput('backtrackingTimeLimitMs', '500');
+
+    expect(() => clickPrimaryAction()).not.toThrow();
+    expect(allocationApiService.compareAllocations).toHaveBeenCalledOnce();
+    expect(allocationApiService.compareAllocations.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        backtrackingTimeLimitMs: 500,
+      }),
+    );
+  });
+
+  it('should send changed CP-SAT numeric limit in execution request', async () => {
+    await changeNumberInput('cpSatTimeLimitSeconds', '0.5');
+
+    clickPrimaryAction();
+
+    expect(allocationApiService.executeAllocation).toHaveBeenCalledOnce();
+    expect(allocationApiService.executeAllocation.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        cpSatTimeLimitSeconds: 0.5,
+      }),
+    );
+  });
+
+  it('should omit time limit properties when both numeric inputs are cleared', async () => {
+    await changeNumberInput('backtrackingTimeLimitMs', '');
+    await changeNumberInput('cpSatTimeLimitSeconds', '');
+
+    expect(component.backtrackingTimeLimitMs).toBeNull();
+    expect(component.cpSatTimeLimitSeconds).toBeNull();
+
+    clickPrimaryAction();
+
+    const request = allocationApiService.executeAllocation.mock.calls[0][0];
+    expect(request).not.toHaveProperty('backtrackingTimeLimitMs');
+    expect(request).not.toHaveProperty('cpSatTimeLimitSeconds');
+  });
+
+  it('should not leave loading active or block another request after numeric input changes', async () => {
+    await changeNumberInput('backtrackingTimeLimitMs', '500');
+
+    clickPrimaryAction();
+    expect(component.isLoading).toBe(false);
+
+    clickPrimaryAction();
+
+    expect(component.isLoading).toBe(false);
+    expect(allocationApiService.executeAllocation).toHaveBeenCalledTimes(2);
+  });
+
   function query(selector: string): Element | null {
     return fixture.nativeElement.querySelector(selector);
   }
@@ -136,6 +190,14 @@ describe('AllocationPageComponent', () => {
   function clickPrimaryAction(): void {
     const button = query('.primary-action') as HTMLButtonElement;
     button.click();
+  }
+
+  async function changeNumberInput(name: string, value: string): Promise<void> {
+    const input = query(`input[name="${name}"]`) as HTMLInputElement;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await fixture.whenStable();
   }
 });
 

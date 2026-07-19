@@ -35,9 +35,15 @@
       </div>
 
       <div class="mode-control" role="group" aria-label="Allocation mode">
-        <button type="button" [class.active]="mode === 'EXPLICIT'" (click)="setMode('EXPLICIT')">EXPLICIT</button>
-        <button type="button" [class.active]="mode === 'AUTO'" (click)="setMode('AUTO')">AUTO</button>
-        <button type="button" [class.active]="mode === 'COMPARE'" (click)="setMode('COMPARE')">COMPARE</button>
+        <button type="button" [class.active]="mode === 'EXPLICIT'" [disabled]="isLoading" (click)="setMode('EXPLICIT')">
+          EXPLICIT
+        </button>
+        <button type="button" [class.active]="mode === 'AUTO'" [disabled]="isLoading" (click)="setMode('AUTO')">
+          AUTO
+        </button>
+        <button type="button" [class.active]="mode === 'COMPARE'" [disabled]="isLoading" (click)="setMode('COMPARE')">
+          COMPARE
+        </button>
       </div>
 
       <form class="settings-form" (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()">

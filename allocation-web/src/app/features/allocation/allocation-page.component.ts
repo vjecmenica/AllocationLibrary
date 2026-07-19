@@ -93,8 +93,8 @@ export class AllocationPageComponent implements OnInit {
   mode: PageMode = 'EXPLICIT';
   selectedAlgorithm: AllocationAlgorithmType = 'GREEDY';
   selectedGoal: AllocationGoal = 'BALANCED';
-  backtrackingTimeLimitMs = '1000';
-  cpSatTimeLimitSeconds = '1.0';
+  backtrackingTimeLimitMs: number | null = 1000;
+  cpSatTimeLimitSeconds: number | null = 1.0;
   healthState: HealthState = 'checking';
   isLoading = false;
   errorMessage: string | null = null;
@@ -117,9 +117,11 @@ export class AllocationPageComponent implements OnInit {
       return;
     }
 
+    const request = this.createExecutionRequest();
+
     this.startRequest();
     this.allocationApi
-      .executeAllocation(this.createExecutionRequest())
+      .executeAllocation(request)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (response) => {
@@ -136,9 +138,11 @@ export class AllocationPageComponent implements OnInit {
       return;
     }
 
+    const request = this.createComparisonRequest();
+
     this.startRequest();
     this.allocationApi
-      .compareAllocations(this.createComparisonRequest())
+      .compareAllocations(request)
       .pipe(finalize(() => (this.isLoading = false)))
       .subscribe({
         next: (response) => {
@@ -222,13 +226,13 @@ export class AllocationPageComponent implements OnInit {
 
   private optionalNumber<T extends 'backtrackingTimeLimitMs' | 'cpSatTimeLimitSeconds'>(
     key: T,
-    value: string,
+    value: number | null,
   ): Partial<Record<T, number>> {
-    if (value.trim() === '') {
+    if (value === null) {
       return {};
     }
 
-    return { [key]: Number(value) } as Partial<Record<T, number>>;
+    return { [key]: value } as Partial<Record<T, number>>;
   }
 
   private toErrorMessage(error: unknown): string {

@@ -149,6 +149,11 @@ h2 {
   color: #ffffff;
 }
 
+.mode-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .settings-form {
   display: grid;
   gap: 14px;
