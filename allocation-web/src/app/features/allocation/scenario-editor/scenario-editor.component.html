@@ -7,6 +7,31 @@
       </p>
     </div>
     <div class="toolbar-actions">
+      <input
+        #scenarioFileInput
+        class="file-input"
+        type="file"
+        accept=".json,application/json"
+        aria-label="Select an allocation scenario JSON file"
+        [disabled]="disabled"
+        (change)="importScenarioFile($event)"
+      />
+      <button
+        type="button"
+        data-testid="import-json"
+        [disabled]="disabled"
+        (click)="scenarioFileInput.click()"
+      >
+        IMPORT JSON
+      </button>
+      <button
+        type="button"
+        data-testid="export-json"
+        [disabled]="disabled || !isScenarioValid()"
+        (click)="exportScenario()"
+      >
+        EXPORT JSON
+      </button>
       <button type="button" data-testid="load-sample" [disabled]="disabled" (click)="loadSample()">
         LOAD SAMPLE
       </button>
@@ -15,6 +40,19 @@
       </button>
     </div>
   </header>
+
+  <div class="import-status-region" aria-live="polite">
+    @if (importStatus(); as status) {
+      <p
+        class="import-status"
+        [class.import-status-success]="status.type === 'success'"
+        [class.import-status-error]="status.type === 'error'"
+        [attr.role]="status.type === 'error' ? 'alert' : null"
+      >
+        {{ status.message }}
+      </p>
+    }
+  </div>
 
   <form class="editor-form" [formGroup]="form">
     <section class="entity-section" formArrayName="resources">

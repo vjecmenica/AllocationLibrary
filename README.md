@@ -38,6 +38,9 @@ The frontend initially loads the Greedy Trap example. Resources and allocation r
 the scenario editor, and EXPLICIT, AUTO, and COMPARE all use the currently entered scenario. The scenario is kept
 only in memory for the current browser session.
 
+Scenarios can be exported as readable JSON files and imported again later. Exports use the versioned
+`schemaVersion: 1` format. Scenarios are not saved automatically in the browser or in a backend database.
+
 ## Run Locally
 
 1. Start `allocation-api`.

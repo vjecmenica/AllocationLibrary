@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -17,6 +17,7 @@ import {
   ResourceRequirementDto,
 } from '../../../core/models/allocation-api.models';
 import { createGreedyTrapScenario } from '../greedy-trap-scenario';
+import { parseScenarioJson, serializeScenario } from './scenario-json';
 import { AllocationScenario, ScenarioEditorState } from './scenario-editor.models';
 
 type TextControl = FormControl<string>;
@@ -59,6 +60,15 @@ type ScenarioForm = FormGroup<{
   resources: FormArray<ResourceForm>;
   requests: FormArray<RequestForm>;
 }>;
+
+type ImportStatus = {
+  type: 'success' | 'error';
+  message: string;
+};
+
+const MAX_SCENARIO_FILE_SIZE_BYTES = 1024 * 1024;
+const IMPORTED_SCENARIO_INVALID_MESSAGE = 'The imported scenario contains invalid values.';
+const SCENARIO_FILE_READ_ERROR_MESSAGE = 'The selected scenario file could not be read.';
 
 const notBlankValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const value = control.value;
@@ -113,23 +123,18 @@ export class ScenarioEditorComponent implements OnInit {
   @Output() readonly scenarioChange = new EventEmitter<ScenarioEditorState>();
 
   readonly form: ScenarioForm;
+  readonly importStatus = signal<ImportStatus | null>(null);
   validationAttempted = false;
   newResourceIndex: number | null = null;
   newRequestIndex: number | null = null;
   private editorDisabled = false;
 
   constructor() {
-    this.form = new FormGroup({
-      resources: new FormArray<ResourceForm>([], {
-        validators: [uniqueTrimmedFieldValidator('id')],
-      }),
-      requests: new FormArray<RequestForm>([], {
-        validators: [nonEmptyArrayValidator, uniqueTrimmedFieldValidator('id')],
-      }),
+    this.form = this.createScenarioForm(createGreedyTrapScenario());
+    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.importStatus.set(null);
+      this.emitState();
     });
-
-    this.replaceScenario(createGreedyTrapScenario());
-    this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.emitState());
   }
 
   @Input()
@@ -164,6 +169,7 @@ export class ScenarioEditorComponent implements OnInit {
       return;
     }
 
+    this.importStatus.set(null);
     this.validationAttempted = false;
     this.replaceScenario(createGreedyTrapScenario());
     this.emitState();
@@ -174,6 +180,7 @@ export class ScenarioEditorComponent implements OnInit {
       return;
     }
 
+    this.importStatus.set(null);
     this.resources.clear({ emitEvent: false });
     this.requests.clear({ emitEvent: false });
     this.form.updateValueAndValidity({ emitEvent: false });
@@ -181,6 +188,84 @@ export class ScenarioEditorComponent implements OnInit {
     this.newResourceIndex = null;
     this.newRequestIndex = null;
     this.emitState();
+  }
+
+  async importScenarioFile(event: Event): Promise<void> {
+    if (this.disabled) {
+      return;
+    }
+
+    this.importStatus.set(null);
+    const input = event.currentTarget;
+    if (!(input instanceof HTMLInputElement)) {
+      this.importStatus.set({ type: 'error', message: SCENARIO_FILE_READ_ERROR_MESSAGE });
+      return;
+    }
+
+    const file = input.files?.item(0);
+    if (!file) {
+      input.value = '';
+      return;
+    }
+
+    try {
+      if (file.size > MAX_SCENARIO_FILE_SIZE_BYTES) {
+        this.importStatus.set({ type: 'error', message: 'Scenario file is too large.' });
+        return;
+      }
+
+      const result = parseScenarioJson(await file.text());
+      if (this.disabled) {
+        return;
+      }
+
+      if (!result.success) {
+        this.importStatus.set({ type: 'error', message: result.message });
+        return;
+      }
+
+      const scenario = this.validatedScenario(result.scenario);
+      if (!scenario) {
+        this.importStatus.set({ type: 'error', message: IMPORTED_SCENARIO_INVALID_MESSAGE });
+        return;
+      }
+
+      this.validationAttempted = false;
+      this.replaceScenario(scenario);
+      this.emitState();
+      this.importStatus.set({ type: 'success', message: 'Scenario imported successfully.' });
+    } catch {
+      this.importStatus.set({ type: 'error', message: SCENARIO_FILE_READ_ERROR_MESSAGE });
+    } finally {
+      input.value = '';
+    }
+  }
+
+  exportScenario(): void {
+    if (this.disabled || !this.isScenarioValid()) {
+      return;
+    }
+
+    const blob = new Blob([serializeScenario(this.toScenario())], {
+      type: 'application/json',
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = 'allocation-scenario.json';
+    anchor.hidden = true;
+    document.body.append(anchor);
+
+    try {
+      anchor.click();
+    } finally {
+      anchor.remove();
+      URL.revokeObjectURL(objectUrl);
+    }
+  }
+
+  isScenarioValid(): boolean {
+    return this.form.valid && this.requests.length > 0;
   }
 
   addResource(): void {
@@ -386,6 +471,27 @@ export class ScenarioEditorComponent implements OnInit {
     this.newRequestIndex = null;
   }
 
+  private createScenarioForm(scenario: AllocationScenario): ScenarioForm {
+    return new FormGroup({
+      resources: new FormArray<ResourceForm>(
+        scenario.resources.map((resource) => this.createResourceForm(resource)),
+        { validators: [uniqueTrimmedFieldValidator('id')] },
+      ),
+      requests: new FormArray<RequestForm>(
+        scenario.requests.map((request) => this.createRequestForm(request)),
+        { validators: [nonEmptyArrayValidator, uniqueTrimmedFieldValidator('id')] },
+      ),
+    });
+  }
+
+  private validatedScenario(scenario: AllocationScenario): AllocationScenario | null {
+    const candidateForm = this.createScenarioForm(scenario);
+    candidateForm.updateValueAndValidity({ emitEvent: false });
+    return candidateForm.valid && candidateForm.controls.requests.length > 0
+      ? this.toScenario(candidateForm)
+      : null;
+  }
+
   private createResourceForm(resource?: ResourceDto): ResourceForm {
     return new FormGroup({
       id: new FormControl(resource?.id ?? '', {
@@ -491,16 +597,19 @@ export class ScenarioEditorComponent implements OnInit {
 
   private emitState(): void {
     this.form.updateValueAndValidity({ emitEvent: false });
-    const valid = this.form.valid && this.requests.length > 0;
+    const valid = this.isScenarioValid();
     this.scenarioChange.emit({
       valid,
       scenario: valid ? this.toScenario() : null,
     });
   }
 
-  private toScenario(): AllocationScenario {
+  private toScenario(form: ScenarioForm = this.form): AllocationScenario {
+    const resources = form.controls.resources;
+    const requests = form.controls.requests;
+
     return {
-      resources: this.resources.controls.map((resource) => ({
+      resources: resources.controls.map((resource) => ({
         id: resource.controls.id.value.trim(),
         name: resource.controls.name.value.trim(),
         type: resource.controls.type.value.trim(),
@@ -510,7 +619,7 @@ export class ScenarioEditorComponent implements OnInit {
           end: normalizeLocalDateTime(window.controls.end.value),
         })),
       })),
-      requests: this.requests.controls.map((request) => ({
+      requests: requests.controls.map((request) => ({
         id: request.controls.id.value.trim(),
         name: request.controls.name.value.trim(),
         startTime: normalizeLocalDateTime(request.controls.startTime.value),
