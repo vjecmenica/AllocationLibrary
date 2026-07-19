@@ -12,15 +12,16 @@
 
 .eyebrow {
   margin: 0 0 4px;
-  color: #5c6678;
+  color: #5b6470;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 h2 {
   margin: 0;
-  color: #18202f;
+  color: #20252d;
+  font-weight: 600;
 }
 
 .summary-note {
@@ -52,29 +53,47 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #e1e6ef;
-  padding: 11px 10px;
+  border-bottom: 1px solid #dfe3e8;
+  padding: 9px 10px;
   text-align: left;
   vertical-align: top;
 }
 
 th {
-  color: #4b5565;
+  border-top: 1px solid #cfd5dc;
+  background: #f3f5f7;
+  color: #434b56;
   font-size: 0.78rem;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
 .best-row {
-  background: #edf8f1;
+  background: #f1f6fb;
+}
+
+.best-row td:first-child {
+  border-left: 3px solid #1f5f99;
+  padding-left: 7px;
 }
 
 .best-badge {
   display: inline-block;
   margin-left: 8px;
-  border: 1px solid #9fcfb1;
-  border-radius: 999px;
-  padding: 2px 8px;
-  color: #17613a;
+  border-left: 2px solid #1f5f99;
+  border-radius: 0;
+  padding: 1px 0 1px 6px;
+  color: #174f80;
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .section-heading {
+    flex-direction: column;
+  }
+
+  .summary-note {
+    max-width: none;
+  }
 }

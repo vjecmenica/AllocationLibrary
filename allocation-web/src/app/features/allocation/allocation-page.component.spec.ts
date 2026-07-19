@@ -67,6 +67,18 @@ describe('AllocationPageComponent', () => {
     expect(component.selectedGoal).toBe('BALANCED');
   });
 
+  it('should show the same RUN action in every mode', () => {
+    expect(primaryAction().textContent?.trim()).toBe('RUN');
+
+    component.setMode('AUTO');
+    fixture.detectChanges();
+    expect(primaryAction().textContent?.trim()).toBe('RUN');
+
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+    expect(primaryAction().textContent?.trim()).toBe('RUN');
+  });
+
   it('should call AllocationApiService with sample scenario when running allocation', () => {
     clickPrimaryAction();
 
@@ -85,6 +97,46 @@ describe('AllocationPageComponent', () => {
         ]),
       }),
     );
+  });
+
+  it('should execute an AUTO request when RUN is clicked in auto mode', () => {
+    component.setMode('AUTO');
+    fixture.detectChanges();
+
+    clickPrimaryAction();
+
+    expect(allocationApiService.executeAllocation).toHaveBeenCalledOnce();
+    expect(allocationApiService.executeAllocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectionMode: 'AUTO',
+        goal: 'BALANCED',
+      }),
+    );
+  });
+
+  it('should compare algorithms when RUN is clicked in compare mode', () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+
+    clickPrimaryAction();
+
+    expect(allocationApiService.compareAllocations).toHaveBeenCalledOnce();
+    expect(allocationApiService.executeAllocation).not.toHaveBeenCalled();
+  });
+
+  it('should keep RUN disabled without changing its label while loading', async () => {
+    const responseSubject = new Subject<AllocationApiResponse>();
+    allocationApiService.executeAllocation.mockReturnValueOnce(responseSubject.asObservable());
+
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(primaryAction().disabled).toBe(true);
+    expect(primaryAction().textContent?.trim()).toBe('RUN');
+
+    responseSubject.next(executionResponse());
+    responseSubject.complete();
+    await fixture.whenStable();
   });
 
   it('should display executed algorithm after a successful execution response', () => {
@@ -278,8 +330,11 @@ describe('AllocationPageComponent', () => {
   }
 
   function clickPrimaryAction(): void {
-    const button = query('.primary-action') as HTMLButtonElement;
-    button.click();
+    primaryAction().click();
+  }
+
+  function primaryAction(): HTMLButtonElement {
+    return query('.primary-action') as HTMLButtonElement;
   }
 
   async function changeNumberInput(name: string, value: string): Promise<void> {

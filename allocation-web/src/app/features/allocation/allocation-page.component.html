@@ -93,15 +93,7 @@
           </label>
         </div>
 
-        @if (mode === 'COMPARE') {
-          <button type="submit" class="primary-action" [disabled]="isLoading()">
-            {{ isLoading() ? 'Comparing algorithms...' : 'Compare Algorithms' }}
-          </button>
-        } @else {
-          <button type="submit" class="primary-action" [disabled]="isLoading()">
-            {{ isLoading() ? 'Running allocation...' : 'Run Allocation' }}
-          </button>
-        }
+        <button type="submit" class="primary-action" [disabled]="isLoading()">RUN</button>
       </form>
     </article>
 
