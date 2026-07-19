@@ -32,10 +32,12 @@
           @for (algorithm of algorithms; track algorithm) {
             <tr [class.best-row]="isBestScore(algorithm)">
               <td>
-                <strong>{{ algorithm }}</strong>
-                @if (isBestScore(algorithm)) {
-                  <span class="best-badge">Best score</span>
-                }
+                <div class="algorithm-cell-content">
+                  <strong>{{ algorithm }}</strong>
+                  @if (isBestScore(algorithm)) {
+                    <span class="best-badge">Best score</span>
+                  }
+                </div>
               </td>
               <td>{{ comparison.results[algorithm].allocationResult.statistics.totalPriorityScore }}</td>
               <td>{{ comparison.results[algorithm].allocationResult.statistics.allocatedRequests }}</td>

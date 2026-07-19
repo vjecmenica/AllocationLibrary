@@ -183,6 +183,25 @@ describe('AllocationPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('CP_SAT');
   });
 
+  it('should mark only the best-score algorithms in comparison results', () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+    clickPrimaryAction();
+    fixture.detectChanges();
+
+    const rows = Array.from(
+      fixture.nativeElement.querySelectorAll('app-comparison-result tbody tr'),
+    ) as HTMLTableRowElement[];
+    const rowFor = (algorithm: string) => rows.find((row) => row.textContent?.includes(algorithm));
+
+    expect(rows).toHaveLength(3);
+    expect(rowFor('GREEDY')?.querySelector('.best-badge')).toBeNull();
+    expect(
+      rowFor('BACKTRACKING')?.querySelector('.best-badge')?.textContent?.trim(),
+    ).toBe('Best score');
+    expect(rowFor('CP_SAT')?.querySelector('.best-badge')?.textContent?.trim()).toBe('Best score');
+  });
+
   it('should send changed backtracking numeric limit in comparison request', async () => {
     component.setMode('COMPARE');
     fixture.detectChanges();

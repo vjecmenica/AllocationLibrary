@@ -48,15 +48,13 @@ h2 {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 820px;
+  min-width: 900px;
 }
 
 th,
 td {
   border-bottom: 1px solid #dfe3e8;
-  padding: 9px 10px;
   text-align: left;
-  vertical-align: top;
 }
 
 th {
@@ -65,7 +63,24 @@ th {
   color: #434b56;
   font-size: 0.78rem;
   font-weight: 600;
+  padding: 9px 10px;
   text-transform: uppercase;
+  vertical-align: top;
+}
+
+tbody tr {
+  height: 62px;
+}
+
+tbody td {
+  padding: 14px 12px;
+  vertical-align: middle;
+}
+
+th:first-child,
+td:first-child {
+  width: 230px;
+  min-width: 230px;
 }
 
 .best-row {
@@ -74,18 +89,33 @@ th {
 
 .best-row td:first-child {
   border-left: 3px solid #1f5f99;
-  padding-left: 7px;
+  padding-left: 9px;
+}
+
+.algorithm-cell-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+.algorithm-cell-content strong {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .best-badge {
   display: inline-block;
-  margin-left: 8px;
+  flex: 0 0 auto;
+  margin-left: 0;
   border-left: 2px solid #1f5f99;
   border-radius: 0;
-  padding: 1px 0 1px 6px;
+  padding: 2px 0 2px 6px;
   color: #174f80;
   font-size: 0.76rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 @media (max-width: 720px) {
