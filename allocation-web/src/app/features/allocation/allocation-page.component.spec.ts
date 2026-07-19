@@ -6,10 +6,14 @@ import { of, Subject, throwError } from 'rxjs';
 
 import { AllocationApiService } from '../../core/api/allocation-api.service';
 import {
+  AllocationApiRequest,
   AllocationApiResponse,
+  AllocationComparisonApiRequest,
   AllocationComparisonApiResponse,
 } from '../../core/models/allocation-api.models';
 import { AllocationPageComponent } from './allocation-page.component';
+import { ComparisonResultComponent } from './comparison-result.component';
+import { ExecutionResultComponent } from './execution-result.component';
 import { ScenarioEditorComponent } from './scenario-editor/scenario-editor.component';
 import { AllocationScenario } from './scenario-editor/scenario-editor.models';
 
@@ -102,6 +106,23 @@ describe('AllocationPageComponent', () => {
     );
   });
 
+  it('should retain the exact request snapshot after a successful execution', () => {
+    clickPrimaryAction();
+
+    const sentRequest = allocationApiService.executeAllocation.mock.calls[0][0];
+    expect(component.lastExecutionRequest()).toBe(sentRequest);
+  });
+
+  it('should retain the exact request snapshot after a successful comparison', () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+
+    clickPrimaryAction();
+
+    const sentRequest = allocationApiService.compareAllocations.mock.calls[0][0];
+    expect(component.lastComparisonRequest()).toBe(sentRequest);
+  });
+
   it('should execute with a valid scenario emitted by the editor', () => {
     const scenario = editedScenario();
     emitScenario(scenario);
@@ -152,6 +173,7 @@ describe('AllocationPageComponent', () => {
     emitScenario(editedScenario());
 
     expect(component.executionResult()).toBeNull();
+    expect(component.lastExecutionRequest()).toBeNull();
   });
 
   it('should clear a comparison result when the scenario changes', () => {
@@ -164,6 +186,27 @@ describe('AllocationPageComponent', () => {
     emitScenario(editedScenario());
 
     expect(component.comparisonResult()).toBeNull();
+    expect(component.lastComparisonRequest()).toBeNull();
+  });
+
+  it('should clear both request snapshots when the mode changes', () => {
+    component.lastExecutionRequest.set(executionRequestSnapshot());
+    component.lastComparisonRequest.set(comparisonRequestSnapshot());
+
+    component.setMode('AUTO');
+
+    expect(component.lastExecutionRequest()).toBeNull();
+    expect(component.lastComparisonRequest()).toBeNull();
+  });
+
+  it('should clear both request snapshots when the scenario changes', () => {
+    component.lastExecutionRequest.set(executionRequestSnapshot());
+    component.lastComparisonRequest.set(comparisonRequestSnapshot());
+
+    emitScenario(editedScenario());
+
+    expect(component.lastExecutionRequest()).toBeNull();
+    expect(component.lastComparisonRequest()).toBeNull();
   });
 
   it('should execute an AUTO request when RUN is clicked in auto mode', () => {
@@ -259,6 +302,46 @@ describe('AllocationPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Algorithm must not be null for explicit selection.',
     );
+    expect(component.lastExecutionRequest()).toBeNull();
+  });
+
+  it('should clear an old request snapshot when a new execution starts', async () => {
+    clickPrimaryAction();
+    expect(component.lastExecutionRequest()).not.toBeNull();
+
+    const responseSubject = new Subject<AllocationApiResponse>();
+    allocationApiService.executeAllocation.mockReturnValueOnce(responseSubject.asObservable());
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(component.lastExecutionRequest()).toBeNull();
+    expect(component.executionResult()).toBeNull();
+
+    responseSubject.next(executionResponse());
+    responseSubject.complete();
+    await fixture.whenStable();
+  });
+
+  it('should pass the execution request and response to the result component', () => {
+    clickPrimaryAction();
+    fixture.detectChanges();
+
+    const resultComponent = fixture.debugElement.query(By.directive(ExecutionResultComponent))
+      .componentInstance as ExecutionResultComponent;
+    expect(resultComponent.request).toBe(component.lastExecutionRequest());
+    expect(resultComponent.result).toBe(component.executionResult());
+  });
+
+  it('should pass the comparison request and response to the result component', () => {
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+    clickPrimaryAction();
+    fixture.detectChanges();
+
+    const resultComponent = fixture.debugElement.query(By.directive(ComparisonResultComponent))
+      .componentInstance as ComparisonResultComponent;
+    expect(resultComponent.request).toBe(component.lastComparisonRequest());
+    expect(resultComponent.result).toBe(component.comparisonResult());
   });
 
   it('should display all algorithms after a successful comparison response', () => {
@@ -498,6 +581,24 @@ function editedScenario(): AllocationScenario {
         ],
       },
     ],
+  };
+}
+
+function executionRequestSnapshot(): AllocationApiRequest {
+  const scenario = editedScenario();
+  return {
+    selectionMode: 'EXPLICIT',
+    algorithm: 'GREEDY',
+    resources: scenario.resources,
+    requests: scenario.requests,
+  };
+}
+
+function comparisonRequestSnapshot(): AllocationComparisonApiRequest {
+  const scenario = editedScenario();
+  return {
+    resources: scenario.resources,
+    requests: scenario.requests,
   };
 }
 

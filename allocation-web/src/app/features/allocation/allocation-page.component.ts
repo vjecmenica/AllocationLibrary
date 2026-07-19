@@ -51,6 +51,8 @@ export class AllocationPageComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly executionResult = signal<AllocationApiResponse | null>(null);
   readonly comparisonResult = signal<AllocationComparisonApiResponse | null>(null);
+  readonly lastExecutionRequest = signal<AllocationApiRequest | null>(null);
+  readonly lastComparisonRequest = signal<AllocationComparisonApiRequest | null>(null);
   readonly currentScenario = signal<AllocationScenario>(createGreedyTrapScenario());
   readonly scenarioValid = signal(true);
 
@@ -82,6 +84,7 @@ export class AllocationPageComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
+          this.lastExecutionRequest.set(request);
           this.executionResult.set(response);
         },
         error: (error: unknown) => {
@@ -107,6 +110,7 @@ export class AllocationPageComponent implements OnInit {
       )
       .subscribe({
         next: (response) => {
+          this.lastComparisonRequest.set(request);
           this.comparisonResult.set(response);
         },
         error: (error: unknown) => {
@@ -120,12 +124,16 @@ export class AllocationPageComponent implements OnInit {
     this.errorMessage.set(null);
     this.executionResult.set(null);
     this.comparisonResult.set(null);
+    this.lastExecutionRequest.set(null);
+    this.lastComparisonRequest.set(null);
   }
 
   onScenarioChange(state: ScenarioEditorState): void {
     this.errorMessage.set(null);
     this.executionResult.set(null);
     this.comparisonResult.set(null);
+    this.lastExecutionRequest.set(null);
+    this.lastComparisonRequest.set(null);
 
     if (state.valid && state.scenario) {
       this.currentScenario.set(state.scenario);
@@ -157,6 +165,8 @@ export class AllocationPageComponent implements OnInit {
     this.errorMessage.set(null);
     this.executionResult.set(null);
     this.comparisonResult.set(null);
+    this.lastExecutionRequest.set(null);
+    this.lastComparisonRequest.set(null);
   }
 
   private createExecutionRequest(): AllocationApiRequest {

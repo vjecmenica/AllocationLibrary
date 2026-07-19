@@ -111,11 +111,11 @@
       }
 
       @if (executionResult(); as result) {
-        <app-execution-result [result]="result" />
+        <app-execution-result [request]="lastExecutionRequest()" [result]="result" />
       }
 
       @if (comparisonResult(); as result) {
-        <app-comparison-result [result]="result" />
+        <app-comparison-result [request]="lastComparisonRequest()" [result]="result" />
       }
     </section>
   </section>

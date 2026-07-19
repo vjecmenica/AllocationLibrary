@@ -41,6 +41,10 @@ only in memory for the current browser session.
 Scenarios can be exported as readable JSON files and imported again later. Exports use the versioned
 `schemaVersion: 1` format. Scenarios are not saved automatically in the browser or in a backend database.
 
+Successful execution and comparison results can be exported as JSON or CSV. Result JSON files include both the
+request and response for reproducibility, while CSV exports provide a flat format for spreadsheet analysis. Result
+import and run history are not currently supported.
+
 ## Run Locally
 
 1. Start `allocation-api`.

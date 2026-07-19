@@ -16,6 +16,7 @@ import {
   ResourceDto,
   ResourceRequirementDto,
 } from '../../../core/models/allocation-api.models';
+import { downloadTextFile } from '../../../core/files/download-text-file';
 import { createGreedyTrapScenario } from '../greedy-trap-scenario';
 import { parseScenarioJson, serializeScenario } from './scenario-json';
 import { AllocationScenario, ScenarioEditorState } from './scenario-editor.models';
@@ -246,22 +247,11 @@ export class ScenarioEditorComponent implements OnInit {
       return;
     }
 
-    const blob = new Blob([serializeScenario(this.toScenario())], {
-      type: 'application/json',
-    });
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = objectUrl;
-    anchor.download = 'allocation-scenario.json';
-    anchor.hidden = true;
-    document.body.append(anchor);
-
-    try {
-      anchor.click();
-    } finally {
-      anchor.remove();
-      URL.revokeObjectURL(objectUrl);
-    }
+    downloadTextFile(
+      serializeScenario(this.toScenario()),
+      'allocation-scenario.json',
+      'application/json',
+    );
   }
 
   isScenarioValid(): boolean {

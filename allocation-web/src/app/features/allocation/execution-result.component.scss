@@ -3,6 +3,37 @@
   gap: 16px;
 }
 
+.result-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  border-bottom: 1px solid #d5dae0;
+  padding-bottom: 10px;
+}
+
+.result-toolbar button {
+  border: 1px solid #aeb7c2;
+  border-radius: 0;
+  background: #ffffff;
+  color: #303844;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 7px 9px;
+}
+
+.result-toolbar button:hover {
+  border-color: #1f5f99;
+  color: #174f80;
+}
+
+.result-toolbar button:focus-visible {
+  outline: 3px solid rgba(31, 95, 153, 0.25);
+  outline-offset: 2px;
+}
+
 .section-heading {
   display: flex;
   align-items: flex-start;

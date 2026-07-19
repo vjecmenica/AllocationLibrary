@@ -1,5 +1,16 @@
 @if (result; as comparison) {
   <section class="result-panel">
+    @if (request) {
+      <div class="result-toolbar" aria-label="Comparison result export actions">
+        <button type="button" data-testid="comparison-export-json" (click)="exportJson()">
+          EXPORT JSON
+        </button>
+        <button type="button" data-testid="comparison-export-csv" (click)="exportCsv()">
+          EXPORT CSV
+        </button>
+      </div>
+    }
+
     <div class="section-heading">
       <div>
         <p class="eyebrow">Comparison result</p>
@@ -39,13 +50,25 @@
                   }
                 </div>
               </td>
-              <td>{{ comparison.results[algorithm].allocationResult.statistics.totalPriorityScore }}</td>
-              <td>{{ comparison.results[algorithm].allocationResult.statistics.allocatedRequests }}</td>
-              <td>{{ comparison.results[algorithm].allocationResult.statistics.rejectedRequests }}</td>
-              <td>{{ comparison.results[algorithm].measuredExecutionTimeMs | number: '1.2-2' }} ms</td>
+              <td>
+                {{ comparison.results[algorithm].allocationResult.statistics.totalPriorityScore }}
+              </td>
+              <td>
+                {{ comparison.results[algorithm].allocationResult.statistics.allocatedRequests }}
+              </td>
+              <td>
+                {{ comparison.results[algorithm].allocationResult.statistics.rejectedRequests }}
+              </td>
+              <td>
+                {{ comparison.results[algorithm].measuredExecutionTimeMs | number: '1.2-2' }} ms
+              </td>
               <td>{{ statusFor(algorithm) }}</td>
               <td>
-                {{ comparison.results[algorithm].allocationResult.statistics.stoppedByLimit ? 'Yes' : 'No' }}
+                {{
+                  comparison.results[algorithm].allocationResult.statistics.stoppedByLimit
+                    ? 'Yes'
+                    : 'No'
+                }}
               </td>
             </tr>
           }

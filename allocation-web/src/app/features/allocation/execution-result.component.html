@@ -1,5 +1,16 @@
 @if (result; as execution) {
   <section class="result-panel">
+    @if (request) {
+      <div class="result-toolbar" aria-label="Execution result export actions">
+        <button type="button" data-testid="execution-export-json" (click)="exportJson()">
+          EXPORT JSON
+        </button>
+        <button type="button" data-testid="execution-export-csv" (click)="exportCsv()">
+          EXPORT CSV
+        </button>
+      </div>
+    }
+
     <div class="section-heading">
       <div>
         <p class="eyebrow">Allocation result</p>
