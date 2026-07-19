@@ -35,13 +35,13 @@
       </div>
 
       <div class="mode-control" role="group" aria-label="Allocation mode">
-        <button type="button" [class.active]="mode === 'EXPLICIT'" [disabled]="isLoading" (click)="setMode('EXPLICIT')">
+        <button type="button" [class.active]="mode === 'EXPLICIT'" [disabled]="isLoading()" (click)="setMode('EXPLICIT')">
           EXPLICIT
         </button>
-        <button type="button" [class.active]="mode === 'AUTO'" [disabled]="isLoading" (click)="setMode('AUTO')">
+        <button type="button" [class.active]="mode === 'AUTO'" [disabled]="isLoading()" (click)="setMode('AUTO')">
           AUTO
         </button>
-        <button type="button" [class.active]="mode === 'COMPARE'" [disabled]="isLoading" (click)="setMode('COMPARE')">
+        <button type="button" [class.active]="mode === 'COMPARE'" [disabled]="isLoading()" (click)="setMode('COMPARE')">
           COMPARE
         </button>
       </div>
@@ -94,39 +94,39 @@
         </div>
 
         @if (mode === 'COMPARE') {
-          <button type="submit" class="primary-action" [disabled]="isLoading">
-            {{ isLoading ? 'Comparing algorithms...' : 'Compare Algorithms' }}
+          <button type="submit" class="primary-action" [disabled]="isLoading()">
+            {{ isLoading() ? 'Comparing algorithms...' : 'Compare Algorithms' }}
           </button>
         } @else {
-          <button type="submit" class="primary-action" [disabled]="isLoading">
-            {{ isLoading ? 'Running allocation...' : 'Run Allocation' }}
+          <button type="submit" class="primary-action" [disabled]="isLoading()">
+            {{ isLoading() ? 'Running allocation...' : 'Run Allocation' }}
           </button>
         }
       </form>
     </article>
 
     <section class="panel output-panel" aria-live="polite">
-      @if (errorMessage) {
-        <div class="error-box">{{ errorMessage }}</div>
+      @if (errorMessage(); as message) {
+        <div class="error-box">{{ message }}</div>
       }
 
-      @if (!errorMessage && !executionResult && !comparisonResult && !isLoading) {
+      @if (!errorMessage() && !executionResult() && !comparisonResult() && !isLoading()) {
         <div class="empty-output">
           <h2>Ready</h2>
           <p>Select a mode and run the sample scenario.</p>
         </div>
       }
 
-      @if (isLoading) {
+      @if (isLoading()) {
         <div class="loading-state">Waiting for API response...</div>
       }
 
-      @if (executionResult) {
-        <app-execution-result [result]="executionResult" />
+      @if (executionResult(); as result) {
+        <app-execution-result [result]="result" />
       }
 
-      @if (comparisonResult) {
-        <app-comparison-result [result]="comparisonResult" />
+      @if (comparisonResult(); as result) {
+        <app-comparison-result [result]="result" />
       }
     </section>
   </section>

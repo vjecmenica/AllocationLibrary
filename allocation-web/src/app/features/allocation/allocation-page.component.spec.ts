@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AllocationApiService } from '../../core/api/allocation-api.service';
 import {
@@ -28,6 +29,7 @@ describe('AllocationPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [AllocationPageComponent],
       providers: [
+        provideZonelessChangeDetection(),
         {
           provide: AllocationApiService,
           useValue: allocationApiService,
@@ -175,12 +177,100 @@ describe('AllocationPageComponent', () => {
     await changeNumberInput('backtrackingTimeLimitMs', '500');
 
     clickPrimaryAction();
-    expect(component.isLoading).toBe(false);
+    expect(component.isLoading()).toBe(false);
 
     clickPrimaryAction();
 
-    expect(component.isLoading).toBe(false);
+    expect(component.isLoading()).toBe(false);
     expect(allocationApiService.executeAllocation).toHaveBeenCalledTimes(2);
+  });
+
+  it('should render async execution response without manual change detection after response', async () => {
+    const responseSubject = new Subject<AllocationApiResponse>();
+    allocationApiService.executeAllocation.mockReturnValueOnce(responseSubject.asObservable());
+
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Waiting for API response...');
+
+    responseSubject.next(executionResponse());
+    responseSubject.complete();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Waiting for API response...');
+    expect(fixture.nativeElement.textContent).toContain('CP_SAT');
+    expect(fixture.nativeElement.textContent).toContain('Score 19');
+    expect(component.isLoading()).toBe(false);
+    expect(component.executionResult()).not.toBeNull();
+  });
+
+  it('should render async comparison response without manual change detection after response', async () => {
+    const responseSubject = new Subject<AllocationComparisonApiResponse>();
+    allocationApiService.compareAllocations.mockReturnValueOnce(responseSubject.asObservable());
+    component.setMode('COMPARE');
+    fixture.detectChanges();
+
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Waiting for API response...');
+
+    responseSubject.next(comparisonResponse());
+    responseSubject.complete();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Waiting for API response...');
+    expect(fixture.nativeElement.textContent).toContain('GREEDY');
+    expect(fixture.nativeElement.textContent).toContain('BACKTRACKING');
+    expect(fixture.nativeElement.textContent).toContain('CP_SAT');
+    expect(fixture.nativeElement.textContent).toContain('Best score 19');
+    expect(component.isLoading()).toBe(false);
+    expect(component.comparisonResult()).not.toBeNull();
+  });
+
+  it('should render async backend error without manual change detection after response', async () => {
+    const responseSubject = new Subject<AllocationApiResponse>();
+    allocationApiService.executeAllocation.mockReturnValueOnce(responseSubject.asObservable());
+
+    clickPrimaryAction();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('Waiting for API response...');
+
+    responseSubject.error(new HttpErrorResponse({
+      status: 400,
+      error: {
+        status: 400,
+        error: 'Bad Request',
+        message: 'Algorithm must not be null for explicit selection.',
+        path: '/api/allocations',
+      },
+    }));
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).not.toContain('Waiting for API response...');
+    expect(fixture.nativeElement.textContent).toContain('Algorithm must not be null for explicit selection.');
+    expect(component.isLoading()).toBe(false);
+    expect(component.errorMessage()).toBe('Algorithm must not be null for explicit selection.');
+  });
+
+  it('should render async health status without manual change detection after response', async () => {
+    const healthSubject = new Subject<{ status: string }>();
+    allocationApiService.getHealth.mockReturnValueOnce(healthSubject.asObservable());
+
+    fixture = TestBed.createComponent(AllocationPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Checking API');
+
+    healthSubject.next({ status: 'UP' });
+    healthSubject.complete();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain('API Online');
+    expect(component.healthState()).toBe('online');
   });
 
   function query(selector: string): Element | null {

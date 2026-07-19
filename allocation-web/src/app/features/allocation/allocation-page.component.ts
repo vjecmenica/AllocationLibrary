@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
@@ -95,25 +95,25 @@ export class AllocationPageComponent implements OnInit {
   selectedGoal: AllocationGoal = 'BALANCED';
   backtrackingTimeLimitMs: number | null = 1000;
   cpSatTimeLimitSeconds: number | null = 1.0;
-  healthState: HealthState = 'checking';
-  isLoading = false;
-  errorMessage: string | null = null;
-  executionResult: AllocationApiResponse | null = null;
-  comparisonResult: AllocationComparisonApiResponse | null = null;
+  readonly healthState = signal<HealthState>('checking');
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly executionResult = signal<AllocationApiResponse | null>(null);
+  readonly comparisonResult = signal<AllocationComparisonApiResponse | null>(null);
 
   ngOnInit(): void {
     this.allocationApi.getHealth().subscribe({
       next: (response) => {
-        this.healthState = response.status === 'UP' ? 'online' : 'unavailable';
+        this.healthState.set(response.status === 'UP' ? 'online' : 'unavailable');
       },
       error: () => {
-        this.healthState = 'unavailable';
+        this.healthState.set('unavailable');
       },
     });
   }
 
   runAllocation(): void {
-    if (this.isLoading) {
+    if (this.isLoading()) {
       return;
     }
 
@@ -122,19 +122,21 @@ export class AllocationPageComponent implements OnInit {
     this.startRequest();
     this.allocationApi
       .executeAllocation(request)
-      .pipe(finalize(() => (this.isLoading = false)))
+      .pipe(finalize(() => {
+        this.isLoading.set(false);
+      }))
       .subscribe({
         next: (response) => {
-          this.executionResult = response;
+          this.executionResult.set(response);
         },
         error: (error: unknown) => {
-          this.errorMessage = this.toErrorMessage(error);
+          this.errorMessage.set(this.toErrorMessage(error));
         },
       });
   }
 
   compareAlgorithms(): void {
-    if (this.isLoading) {
+    if (this.isLoading()) {
       return;
     }
 
@@ -143,30 +145,32 @@ export class AllocationPageComponent implements OnInit {
     this.startRequest();
     this.allocationApi
       .compareAllocations(request)
-      .pipe(finalize(() => (this.isLoading = false)))
+      .pipe(finalize(() => {
+        this.isLoading.set(false);
+      }))
       .subscribe({
         next: (response) => {
-          this.comparisonResult = response;
+          this.comparisonResult.set(response);
         },
         error: (error: unknown) => {
-          this.errorMessage = this.toErrorMessage(error);
+          this.errorMessage.set(this.toErrorMessage(error));
         },
       });
   }
 
   setMode(mode: PageMode): void {
     this.mode = mode;
-    this.errorMessage = null;
-    this.executionResult = null;
-    this.comparisonResult = null;
+    this.errorMessage.set(null);
+    this.executionResult.set(null);
+    this.comparisonResult.set(null);
   }
 
   healthLabel(): string {
-    if (this.healthState === 'online') {
+    if (this.healthState() === 'online') {
       return 'API Online';
     }
 
-    if (this.healthState === 'unavailable') {
+    if (this.healthState() === 'unavailable') {
       return 'API Unavailable';
     }
 
@@ -174,14 +178,14 @@ export class AllocationPageComponent implements OnInit {
   }
 
   healthClass(): string {
-    return `health-${this.healthState}`;
+    return `health-${this.healthState()}`;
   }
 
   private startRequest(): void {
-    this.isLoading = true;
-    this.errorMessage = null;
-    this.executionResult = null;
-    this.comparisonResult = null;
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.executionResult.set(null);
+    this.comparisonResult.set(null);
   }
 
   private createExecutionRequest(): AllocationApiRequest {
