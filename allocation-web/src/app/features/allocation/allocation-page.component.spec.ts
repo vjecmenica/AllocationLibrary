@@ -362,7 +362,9 @@ describe('AllocationPageComponent', () => {
     fixture.detectChanges();
 
     const rows = Array.from(
-      fixture.nativeElement.querySelectorAll('app-comparison-result tbody tr'),
+      fixture.nativeElement.querySelectorAll(
+        'app-comparison-result [data-testid="comparison-summary-table"] tbody tr',
+      ),
     ) as HTMLTableRowElement[];
     const rowFor = (algorithm: string) => rows.find((row) => row.textContent?.includes(algorithm));
 

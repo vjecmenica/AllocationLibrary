@@ -142,6 +142,33 @@ describe('result export utilities', () => {
     expect(csv.endsWith('\r\n')).toBe(true);
   });
 
+  it('should escape commas, quotes, and newlines in a complete execution CSV document', () => {
+    const specialRequest = request('REQ_SPECIAL', 'Exam, "Final"\nDay two', 10);
+    const specialResource = resource('R_SPECIAL', 'Room, "A"\nNorth', 'ROOM');
+    const apiRequest: AllocationApiRequest = {
+      selectionMode: 'EXPLICIT',
+      algorithm: 'CP_SAT',
+      resources: [specialResource],
+      requests: [specialRequest],
+    };
+    const apiResponse: AllocationApiResponse = {
+      selectionMode: 'EXPLICIT',
+      requestedAlgorithm: 'CP_SAT',
+      executedAlgorithm: 'CP_SAT',
+      goal: null,
+      selectionReason: 'CP-SAT was selected explicitly.',
+      measuredExecutionTimeMs: 12.5,
+      allocations: [{ request: specialRequest, assignedResources: [specialResource] }],
+      rejectedRequests: [],
+      statistics: statistics(10, 1, 0, 'OPTIMAL'),
+    };
+
+    expect(executionResultToCsv(apiRequest, apiResponse)).toBe(
+      'requestId,requestName,status,priority,startTime,durationMinutes,assignedResourceIds,assignedResourceNames,rejectionReason,selectionMode,requestedAlgorithm,executedAlgorithm,goal,totalPriorityScore,measuredExecutionTimeMs,algorithmExecutionTimeMs,algorithmStatus,exploredStates,stoppedByLimit,objectiveValue\r\n' +
+        'REQ_SPECIAL,"Exam, ""Final""\nDay two",ACCEPTED,10,2026-07-01T10:00:00,120,R_SPECIAL,"Room, ""A""\nNorth",,EXPLICIT,CP_SAT,CP_SAT,,10,12.5,2,OPTIMAL,7,false,31\r\n',
+    );
+  });
+
   it('should always order comparison rows by algorithm', () => {
     expect(
       comparisonCsvLines()

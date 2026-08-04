@@ -27,7 +27,7 @@
     </p>
 
     <div class="table-wrap">
-      <table>
+      <table data-testid="comparison-summary-table">
         <thead>
           <tr>
             <th>Algorithm</th>
@@ -75,5 +75,140 @@
         </tbody>
       </table>
     </div>
+
+    @if (request) {
+      <section class="request-comparison" data-testid="request-level-comparison">
+        <div class="subsection-heading">
+          <p class="eyebrow">Detailed outcomes</p>
+          <h3>REQUEST-LEVEL COMPARISON</h3>
+        </div>
+
+        @if (requestRows().length > 0) {
+          <div class="table-wrap request-table-wrap">
+            <table class="request-comparison-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Request name</th>
+                  <th>Priority</th>
+                  @for (algorithm of algorithms; track algorithm) {
+                    <th>{{ algorithm }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of requestRows(); track row.request.id) {
+                  <tr data-testid="request-comparison-row">
+                    <td>
+                      <strong>{{ row.request.id }}</strong>
+                    </td>
+                    <td>{{ row.request.name }}</td>
+                    <td>{{ row.request.priority }}</td>
+                    @for (algorithm of algorithms; track algorithm) {
+                      @let outcome = row.outcomes[algorithm];
+                      <td
+                        class="request-outcome"
+                        [class]="outcomeClass(outcome.status)"
+                        [attr.data-testid]="'request-outcome-' + algorithm"
+                      >
+                        <strong class="outcome-status">{{ outcome.status }}</strong>
+                        @if (outcome.status === 'ACCEPTED') {
+                          @if (outcome.assignedResources.length > 0) {
+                            <span class="outcome-detail">
+                              @for (resource of outcome.assignedResources; track resource.id) {
+                                <span>{{ resource.id }} - {{ resource.name }}</span>
+                              }
+                            </span>
+                          } @else {
+                            <span class="outcome-detail">No assigned resources</span>
+                          }
+                        } @else if (outcome.status === 'REJECTED') {
+                          <span class="outcome-detail">{{ outcome.rejectionReason }}</span>
+                        } @else {
+                          <span class="outcome-detail">No consistent result data</span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <section class="algorithm-details" aria-labelledby="algorithm-details-heading">
+            <div class="subsection-heading">
+              <p class="eyebrow">Algorithm details</p>
+              <h3 id="algorithm-details-heading">{{ selectedAlgorithm() }}</h3>
+            </div>
+
+            <div class="algorithm-tabs" aria-label="Algorithm detail selection">
+              @for (algorithm of algorithms; track algorithm) {
+                <button
+                  type="button"
+                  [class.active]="selectedAlgorithm() === algorithm"
+                  [attr.aria-pressed]="selectedAlgorithm() === algorithm"
+                  [attr.data-testid]="'algorithm-detail-' + algorithm"
+                  (click)="selectAlgorithm(algorithm)"
+                >
+                  {{ algorithm }}
+                </button>
+              }
+            </div>
+
+            <div class="detail-columns">
+              <section>
+                <h4>Accepted allocations</h4>
+                @if (selectedAcceptedRows().length > 0) {
+                  <div class="detail-list" data-testid="accepted-detail-list">
+                    @for (row of selectedAcceptedRows(); track row.request.id) {
+                      <div class="detail-item">
+                        <strong>{{ row.request.id }} - {{ row.request.name }}</strong>
+                        <span>
+                          @for (
+                            resource of row.outcomes[selectedAlgorithm()].assignedResources;
+                            track resource.id
+                          ) {
+                            <span class="resource-detail">
+                              {{ resource.id }} - {{ resource.name }}
+                            </span>
+                          }
+                        </span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-detail">No accepted allocations.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Rejected requests</h4>
+                @if (selectedRejectedRows().length > 0) {
+                  <div class="detail-list" data-testid="rejected-detail-list">
+                    @for (row of selectedRejectedRows(); track row.request.id) {
+                      <div class="detail-item">
+                        <strong>{{ row.request.id }} - {{ row.request.name }}</strong>
+                        <span>{{ row.outcomes[selectedAlgorithm()].rejectionReason }}</span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-detail">No rejected requests.</p>
+                }
+              </section>
+            </div>
+
+            @if (selectedUnknownRows().length > 0) {
+              <div class="unknown-detail" role="status">
+                <strong>Unknown outcomes:</strong>
+                {{ selectedUnknownRequestIds() }}
+              </div>
+            }
+          </section>
+        } @else {
+          <p class="empty-detail">The comparison request contains no allocation requests.</p>
+        }
+      </section>
+    }
   </section>
 }
