@@ -1,12 +1,26 @@
-name: Project Test
+name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
+    name: Backend tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -16,14 +30,20 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
 
       - name: Run Maven tests
-        run: mvn -B clean test
+        run: mvn -B -ntp test
 
   frontend:
+    name: Frontend tests and build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: allocation-web
 
     steps:
       - name: Checkout
@@ -32,18 +52,15 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22.22.3'
+          node-version: "22.22.3"
           cache: npm
           cache-dependency-path: allocation-web/package-lock.json
 
       - name: Install frontend dependencies
-        working-directory: allocation-web
         run: npm ci
 
-      - name: Build frontend
-        working-directory: allocation-web
-        run: npm run build
-
       - name: Run frontend tests
-        working-directory: allocation-web
         run: npm run test:ci
+
+      - name: Build frontend
+        run: npm run build

@@ -163,16 +163,20 @@
                     @for (row of selectedAcceptedRows(); track row.request.id) {
                       <div class="detail-item">
                         <strong>{{ row.request.id }} - {{ row.request.name }}</strong>
-                        <span>
-                          @for (
-                            resource of row.outcomes[selectedAlgorithm()].assignedResources;
-                            track resource.id
-                          ) {
-                            <span class="resource-detail">
-                              {{ resource.id }} - {{ resource.name }}
-                            </span>
-                          }
-                        </span>
+                        @if (row.outcomes[selectedAlgorithm()].assignedResources.length > 0) {
+                          <span>
+                            @for (
+                              resource of row.outcomes[selectedAlgorithm()].assignedResources;
+                              track resource.id
+                            ) {
+                              <span class="resource-detail">
+                                {{ resource.id }} - {{ resource.name }}
+                              </span>
+                            }
+                          </span>
+                        } @else {
+                          <span>No assigned resources</span>
+                        }
                       </div>
                     }
                   </div>

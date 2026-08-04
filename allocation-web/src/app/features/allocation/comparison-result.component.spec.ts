@@ -131,6 +131,9 @@ describe('ComparisonResultComponent', () => {
     const resultBefore = structuredClone(component.result);
 
     expect(query('[data-testid="accepted-detail-list"]')?.textContent).toContain('REQ_FIRST');
+    expect(query('[data-testid="accepted-detail-list"]')?.textContent).toContain(
+      'ROOM_SMALL - Small room',
+    );
     expect(query('[data-testid="rejected-detail-list"]')?.textContent).toContain('REQ_SECOND');
 
     button('algorithm-detail-CP_SAT').click();
@@ -142,6 +145,18 @@ describe('ComparisonResultComponent', () => {
     expect(details).toContain('REQ_FIRST');
     expect(component.request).toEqual(requestBefore);
     expect(component.result).toEqual(resultBefore);
+  });
+
+  it('should describe an accepted allocation without assigned resources', () => {
+    const response = comparisonResponse();
+    response.results.GREEDY.allocationResult.allocations[0].assignedResources = [];
+    component.request = comparisonRequest();
+    component.result = response;
+    fixture.detectChanges();
+
+    expect(query('[data-testid="accepted-detail-list"]')?.textContent).toContain(
+      'No assigned resources',
+    );
   });
 
   it('should update selected algorithm details through zoneless signal change detection', async () => {

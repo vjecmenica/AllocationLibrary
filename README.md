@@ -16,6 +16,14 @@ Run all tests from the repository root:
 mvn clean test
 ```
 
+## Continuous Integration
+
+The GitHub Actions CI workflow automatically verifies:
+
+- Maven backend tests for `allocation-core` and `allocation-api`;
+- Angular frontend tests;
+- the Angular production build.
+
 ## REST API
 
 See [docs/rest-api.md](docs/rest-api.md) for endpoint documentation and JSON examples.

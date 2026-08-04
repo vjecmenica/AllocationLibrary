@@ -95,6 +95,32 @@ describe('comparison analysis', () => {
     });
   });
 
+  it('marks duplicate allocations for the same algorithm as UNKNOWN', () => {
+    const requestDto = allocationRequest('REQ_1', 'Duplicated allocation');
+    const duplicatedAllocation = allocation(requestDto, [resource('ROOM_1', 'Room')]);
+    const response = comparisonResponse({
+      GREEDY: entry('GREEDY', [duplicatedAllocation, duplicatedAllocation]),
+    });
+
+    const outcome = buildRequestComparisonRows(comparisonRequest([requestDto]), response)[0]
+      .outcomes.GREEDY;
+
+    expect(outcome.status).toBe('UNKNOWN');
+  });
+
+  it('marks duplicate rejections for the same algorithm as UNKNOWN', () => {
+    const requestDto = allocationRequest('REQ_1', 'Duplicated rejection');
+    const duplicatedRejection = rejection(requestDto, 'No matching resource.');
+    const response = comparisonResponse({
+      GREEDY: entry('GREEDY', [], [duplicatedRejection, duplicatedRejection]),
+    });
+
+    const outcome = buildRequestComparisonRows(comparisonRequest([requestDto]), response)[0]
+      .outcomes.GREEDY;
+
+    expect(outcome.status).toBe('UNKNOWN');
+  });
+
   it('returns UNKNOWN outcomes for empty allocation and rejection lists', () => {
     const row = buildRequestComparisonRows(
       comparisonRequest([allocationRequest('REQ_1', 'Unresolved request')]),
