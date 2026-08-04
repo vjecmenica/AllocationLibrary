@@ -163,27 +163,27 @@ td:first-child {
 }
 
 .request-comparison-table {
-  min-width: 1200px;
+  min-width: 1080px;
 }
 
 .request-comparison-table th:first-child,
 .request-comparison-table td:first-child {
-  min-width: 150px;
+  min-width: 130px;
 }
 
 .request-comparison-table th:nth-child(2),
 .request-comparison-table td:nth-child(2) {
-  min-width: 180px;
+  min-width: 150px;
 }
 
 .request-comparison-table th:nth-child(3),
 .request-comparison-table td:nth-child(3) {
-  min-width: 80px;
+  min-width: 70px;
 }
 
 .request-comparison-table th:nth-child(n + 4),
 .request-comparison-table td:nth-child(n + 4) {
-  min-width: 250px;
+  min-width: 220px;
 }
 
 .request-outcome {
