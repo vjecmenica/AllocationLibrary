@@ -1,60 +1,97 @@
 package allocation.benchmark;
 
 import allocation.generator.GeneratedScenario;
-import allocation.generator.RandomScenarioGenerator;
-import allocation.generator.ScenarioGenerationConfig;
+import allocation.model.AllocationResult;
+import allocation.model.AllocationStatistics;
+import allocation.model.Resource;
+import allocation.service.AllocationAlgorithmType;
+import allocation.service.AllocationExecutionResult;
+import allocation.service.AllocationOptions;
+import allocation.service.AllocationSelectionMode;
+import allocation.service.ResourceAllocator;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
+import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BenchmarkRunnerTest {
 
     @Test
-    void runnerReturnsOneResultPerAlgorithm() {
-        GeneratedScenario scenario = new RandomScenarioGenerator().generate(
-                new ScenarioGenerationConfig(
-                        "BENCH",
-                        8,
-                        8,
-                        1001L,
-                        LocalDateTime.of(2026, 7, 15, 8, 0),
-                        4,
-                        0.30,
-                        0.10
-                )
+    void smokeRunExecutesAllThreeAlgorithms() {
+        BenchmarkConfiguration configuration = configuration(0, 1);
+
+        BenchmarkRun run = new BenchmarkRunner().run(configuration);
+
+        assertEquals(3, run.getRawResults().size());
+        assertEquals(
+                List.of(
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.BACKTRACKING,
+                        AllocationAlgorithmType.CP_SAT
+                ),
+                run.getRawResults().stream().map(BenchmarkResult::getAlgorithm).toList()
         );
+        assertEquals(List.of(10, 19, 19), scores(run));
+        assertTrue(run.getRawResults().stream().allMatch(result -> result.getMeasuredExecutionTimeMs() >= 0));
+    }
 
-        List<BenchmarkResult> results = new BenchmarkRunner().run(
-                scenario,
-                new BenchmarkConfiguration(2, 500, 2.0)
+    @Test
+    void warmupExecutionsAreNotIncludedInRawResults() {
+        CountingResourceAllocator allocator = new CountingResourceAllocator(false);
+        BenchmarkRunner runner = runner(allocator);
+
+        BenchmarkRun run = runner.run(configuration(2, 1));
+
+        assertEquals(9, allocator.callCount);
+        assertEquals(3, run.getRawResults().size());
+        assertEquals(3, run.getSummaryResults().size());
+    }
+
+    @Test
+    void rawResultsUseStableRepetitionAndAlgorithmOrder() {
+        BenchmarkRun run = runner(new CountingResourceAllocator(false)).run(configuration(0, 2));
+
+        assertEquals(
+                List.of(
+                        "1-GREEDY",
+                        "1-BACKTRACKING",
+                        "1-CP_SAT",
+                        "2-GREEDY",
+                        "2-BACKTRACKING",
+                        "2-CP_SAT"
+                ),
+                run.getRawResults().stream()
+                        .map(result -> result.getRepetition() + "-" + result.getAlgorithm())
+                        .toList()
         );
+    }
 
-        assertEquals(3, results.size());
+    @Test
+    void algorithmsReceiveCopiesAndCannotMutateOriginalScenario() {
+        BenchmarkConfiguration configuration = configuration(0, 1);
+        GeneratedScenario original = new BenchmarkScenarioFactory().create(
+                BenchmarkProfile.GREEDY_TRAP,
+                42L,
+                configuration
+        );
+        int originalCapacity = original.getResources().get(0).getCapacity("people");
+        BenchmarkRunner runner = runner(new CountingResourceAllocator(true));
 
-        Set<String> algorithmNames = results.stream()
-                .map(BenchmarkResult::getAlgorithmName)
-                .collect(Collectors.toSet());
+        runner.runScenario(BenchmarkProfile.GREEDY_TRAP, original, configuration);
 
-        assertEquals(Set.of("GREEDY", "BACKTRACKING", "CP-SAT"), algorithmNames);
-
-        for (BenchmarkResult result : results) {
-            assertEquals("BENCH", result.getScenarioName());
-            assertEquals(1001L, result.getSeed());
-            assertEquals(8, result.getResourceCount());
-            assertEquals(8, result.getRequestCount());
-            assertEquals(
-                    result.getRequestCount(),
-                    result.getAllocatedRequests() + result.getRejectedRequests()
-            );
-            assertTrue(result.getExecutionTimeMs() >= 0.0);
-        }
+        assertEquals(originalCapacity, original.getResources().get(0).getCapacity("people"));
+        assertFalse(original.getResources().get(0).getCapacities().containsKey("mutated"));
     }
 
     @Test
@@ -62,5 +99,89 @@ class BenchmarkRunnerTest {
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkConfiguration(0, 100, 1.0));
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkConfiguration(1, 0, 1.0));
         assertThrows(IllegalArgumentException.class, () -> new BenchmarkConfiguration(1, 100, 0));
+    }
+
+    private BenchmarkRunner runner(ResourceAllocator allocator) {
+        return new BenchmarkRunner(
+                allocator,
+                new BenchmarkScenarioFactory(),
+                Clock.fixed(Instant.parse("2026-09-01T08:00:00Z"), ZoneOffset.UTC),
+                () -> UUID.fromString("00000000-0000-0000-0000-000000000001")
+        );
+    }
+
+    private BenchmarkConfiguration configuration(int warmups, int measuredRuns) {
+        return new BenchmarkConfiguration(
+                List.of(BenchmarkProfile.GREEDY_TRAP),
+                List.of(42L),
+                warmups,
+                measuredRuns,
+                500,
+                1.0,
+                Path.of("benchmark-results"),
+                10,
+                10,
+                3
+        );
+    }
+
+    private List<Integer> scores(BenchmarkRun run) {
+        return run.getRawResults().stream().map(BenchmarkResult::getTotalPriorityScore).toList();
+    }
+
+    private static class CountingResourceAllocator extends ResourceAllocator {
+
+        private final boolean mutateInput;
+        private int callCount;
+
+        private CountingResourceAllocator(boolean mutateInput) {
+            this.mutateInput = mutateInput;
+        }
+
+        @Override
+        public AllocationExecutionResult execute(
+                List<Resource> resources,
+                List<allocation.model.AllocationRequest> requests,
+                AllocationOptions options
+        ) {
+            callCount++;
+
+            if (mutateInput) {
+                resources.get(0).getCapacities().put("mutated", 1);
+            }
+
+            int score = switch (options.getAlgorithmType()) {
+                case GREEDY -> 10;
+                case BACKTRACKING, CP_SAT -> 19;
+            };
+            String status = options.getAlgorithmType() == AllocationAlgorithmType.CP_SAT
+                    ? "OPTIMAL"
+                    : null;
+            AllocationResult result = new AllocationResult(
+                    new ArrayList<>(),
+                    new ArrayList<>(),
+                    new AllocationStatistics(
+                            requests.size(),
+                            0,
+                            requests.size(),
+                            0,
+                            score,
+                            0,
+                            false,
+                            status,
+                            0
+                    )
+            );
+
+            return new AllocationExecutionResult(
+                    AllocationSelectionMode.EXPLICIT,
+                    options.getAlgorithmType(),
+                    options.getAlgorithmType(),
+                    null,
+                    "Selected for a benchmark test.",
+                    0.25,
+                    result
+            );
+        }
     }
 }

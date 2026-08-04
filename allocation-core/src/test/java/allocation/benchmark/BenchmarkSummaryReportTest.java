@@ -1,105 +1,74 @@
 package allocation.benchmark;
 
+import allocation.service.AllocationAlgorithmType;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static allocation.benchmark.BenchmarkTestData.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BenchmarkSummaryReportTest {
 
     @Test
-    void summaryGroupsResultsAndCountsBestScoreTies() {
+    void aggregationCalculatesMeanMedianMinimumAndMaximum() {
         List<BenchmarkResult> results = List.of(
-                result("TINY-1001", 1001L, "GREEDY", 4, 4, 20, 0.20, false, null),
-                result("TINY-1001", 1001L, "BACKTRACKING", 5, 3, 25, 1.50, false, null),
-                result("TINY-1001", 1001L, "CP-SAT", 5, 3, 25, 0.80, false, "OPTIMAL"),
-                result("TINY-1002", 1002L, "GREEDY", 3, 5, 18, 0.25, false, null),
-                result("TINY-1002", 1002L, "BACKTRACKING", 4, 4, 22, 5.00, true, null),
-                result("TINY-1002", 1002L, "CP-SAT", 4, 4, 23, 0.90, false, "FEASIBLE")
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 1, AllocationAlgorithmType.GREEDY, 1, 10, 2, false, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 2, AllocationAlgorithmType.GREEDY, 3, 14, 4, false, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 3, AllocationAlgorithmType.GREEDY, 7, 18, 6, true, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 4, AllocationAlgorithmType.GREEDY, 9, 22, 8, false, null)
         );
 
-        BenchmarkSummaryReport report = BenchmarkSummaryReport.fromResults(results);
+        BenchmarkSummaryResult summary = BenchmarkSummaryReport.fromResults(results)
+                .getSummaries()
+                .get(0);
 
-        BenchmarkSummaryReport.GroupSummary cpSatSummary = report.getGroupSummaries()
-                .stream()
-                .filter(summary -> "TINY".equals(summary.getScenarioSize()))
-                .filter(summary -> "CP-SAT".equals(summary.getAlgorithmName()))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(2, cpSatSummary.getScenarioCount());
-        assertEquals(4.5, cpSatSummary.getAverageAllocatedRequests(), 0.0001);
-        assertEquals(24.0, cpSatSummary.getAverageTotalPriorityScore(), 0.0001);
-        assertEquals(0.85, cpSatSummary.getMedianExecutionTimeMs(), 0.0001);
-        assertEquals(1, cpSatSummary.getOptimalStatusCount());
-        assertEquals(1, cpSatSummary.getFeasibleStatusCount());
-        assertEquals(0, cpSatSummary.getOtherStatusCount());
-        assertEquals(0, cpSatSummary.getNotApplicableStatusCount());
-
-        BenchmarkSummaryReport.GroupSummary backtrackingSummary = report.getGroupSummaries()
-                .stream()
-                .filter(summary -> "TINY".equals(summary.getScenarioSize()))
-                .filter(summary -> "BACKTRACKING".equals(summary.getAlgorithmName()))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(2, backtrackingSummary.getNotApplicableStatusCount());
-        assertEquals(0, backtrackingSummary.getOtherStatusCount());
-
-        BenchmarkSummaryReport.BestScoreSummary backtrackingBest = report.getBestScoreSummaries()
-                .stream()
-                .filter(summary -> "BACKTRACKING".equals(summary.getAlgorithmName()))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(1, backtrackingBest.getBestOrTiedScenarios());
-        assertEquals(0, backtrackingBest.getExclusiveBestScenarios());
-        assertEquals(1, backtrackingBest.getTiedBestScenarios());
-
-        BenchmarkSummaryReport.BestScoreSummary cpSatBest = report.getBestScoreSummaries()
-                .stream()
-                .filter(summary -> "CP-SAT".equals(summary.getAlgorithmName()))
-                .findFirst()
-                .orElseThrow();
-
-        assertEquals(2, cpSatBest.getBestOrTiedScenarios());
-        assertEquals(1, cpSatBest.getExclusiveBestScenarios());
-        assertEquals(1, cpSatBest.getTiedBestScenarios());
-
-        String consoleReport = report.formatForConsole();
-        assertTrue(consoleReport.contains("BENCHMARK SUMMARY"));
-        assertTrue(consoleReport.contains("status OPTIMAL/FEASIBLE/OTHER/N/A"));
-        assertTrue(consoleReport.contains("exclusiveBestScenarios"));
-        assertTrue(consoleReport.contains("tiedBestScenarios"));
+        assertEquals(4, summary.getMeasuredRuns());
+        assertEquals(5.0, summary.getAverageMeasuredExecutionTimeMs(), 0.0001);
+        assertEquals(5.0, summary.getMedianMeasuredExecutionTimeMs(), 0.0001);
+        assertEquals(1.0, summary.getMinimumMeasuredExecutionTimeMs(), 0.0001);
+        assertEquals(9.0, summary.getMaximumMeasuredExecutionTimeMs(), 0.0001);
+        assertEquals(16.0, summary.getAverageTotalPriorityScore(), 0.0001);
+        assertEquals(22, summary.getBestTotalPriorityScore());
+        assertEquals(10, summary.getWorstTotalPriorityScore());
+        assertEquals(5.0, summary.getAverageAllocatedRequests(), 0.0001);
     }
 
-    private BenchmarkResult result(
-            String scenarioName,
-            long seed,
-            String algorithmName,
-            int allocated,
-            int rejected,
-            int score,
-            double timeMs,
-            boolean stoppedByLimit,
-            String status
-    ) {
-        return new BenchmarkResult(
-                scenarioName,
-                seed,
-                8,
-                8,
-                algorithmName,
-                allocated,
-                rejected,
-                score,
-                timeMs,
-                0,
-                stoppedByLimit,
-                status,
-                0
+    @Test
+    void aggregationCountsLimitsAndOptimalCpSatRuns() {
+        List<BenchmarkResult> results = List.of(
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 1, AllocationAlgorithmType.CP_SAT, 1, 10, 2, false, "OPTIMAL"),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 2, AllocationAlgorithmType.CP_SAT, 2, 10, 2, true, "FEASIBLE"),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 3, AllocationAlgorithmType.CP_SAT, 3, 10, 2, false, "OPTIMAL")
+        );
+
+        BenchmarkSummaryResult summary = BenchmarkSummaryReport.fromResults(results)
+                .getSummaries()
+                .get(0);
+
+        assertEquals(1, summary.getStoppedByLimitRuns());
+        assertEquals(2, summary.getOptimalCpSatRuns());
+        assertTrue(BenchmarkSummaryReport.fromResults(results).formatForConsole().contains("optimalCpSat=2"));
+    }
+
+    @Test
+    void summariesUseStableProfileSeedAndAlgorithmOrder() {
+        List<BenchmarkResult> results = List.of(
+                result(BenchmarkProfile.CONFLICT_HEAVY, 2, 1, AllocationAlgorithmType.CP_SAT, 1, 1, 1, false, "OPTIMAL"),
+                result(BenchmarkProfile.BALANCED_SMALL, 2, 1, AllocationAlgorithmType.BACKTRACKING, 1, 1, 1, false, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 1, 1, AllocationAlgorithmType.GREEDY, 1, 1, 1, false, null)
+        );
+
+        assertEquals(
+                List.of(
+                        "BALANCED_SMALL-1-GREEDY",
+                        "BALANCED_SMALL-2-BACKTRACKING",
+                        "CONFLICT_HEAVY-2-CP_SAT"
+                ),
+                BenchmarkSummaryReport.fromResults(results).getSummaries().stream()
+                        .map(summary -> summary.getProfile() + "-" + summary.getSeed() + "-" + summary.getAlgorithm())
+                        .toList()
         );
     }
 }

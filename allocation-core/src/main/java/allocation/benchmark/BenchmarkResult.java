@@ -1,65 +1,112 @@
 package allocation.benchmark;
 
+import allocation.service.AllocationAlgorithmType;
+
+import java.time.Instant;
+
 /**
- * Result of one algorithm on one scenario after all benchmark repetitions.
- *
- * The solution-quality fields, such as score and allocated request count, come
- * from the best result found across repetitions. The execution time is the
- * median wall-clock duration of all repetitions, measured by BenchmarkRunner
- * with System.nanoTime().
+ * One measured algorithm execution. Warmup executions are never represented by this model.
  */
 public class BenchmarkResult {
 
-    private String scenarioName;
-    private long seed;
-    private int resourceCount;
-    private int requestCount;
-    private String algorithmName;
-    private int allocatedRequests;
-    private int rejectedRequests;
-    private int totalPriorityScore;
-    private double executionTimeMs;
-    private long exploredStates;
-    private boolean stoppedByLimit;
-    private String algorithmStatus;
-    private double objectiveValue;
+    public static final int SCHEMA_VERSION = 1;
+
+    private final String benchmarkRunId;
+    private final Instant generatedAt;
+    private final BenchmarkProfile profile;
+    private final long seed;
+    private final int repetition;
+    private final AllocationAlgorithmType algorithm;
+    private final int resourceCount;
+    private final int requestCount;
+    private final long backtrackingTimeLimitMs;
+    private final double cpSatTimeLimitSeconds;
+    private final int totalPriorityScore;
+    private final int allocatedRequests;
+    private final int rejectedRequests;
+    private final double measuredExecutionTimeMs;
+    private final long algorithmExecutionTimeMs;
+    private final long exploredStates;
+    private final boolean stoppedByLimit;
+    private final String algorithmStatus;
+    private final double objectiveValue;
 
     public BenchmarkResult(
-            String scenarioName,
+            String benchmarkRunId,
+            Instant generatedAt,
+            BenchmarkProfile profile,
             long seed,
+            int repetition,
+            AllocationAlgorithmType algorithm,
             int resourceCount,
             int requestCount,
-            String algorithmName,
+            long backtrackingTimeLimitMs,
+            double cpSatTimeLimitSeconds,
+            int totalPriorityScore,
             int allocatedRequests,
             int rejectedRequests,
-            int totalPriorityScore,
-            double executionTimeMs,
+            double measuredExecutionTimeMs,
+            long algorithmExecutionTimeMs,
             long exploredStates,
             boolean stoppedByLimit,
             String algorithmStatus,
             double objectiveValue
     ) {
-        this.scenarioName = scenarioName;
+        this.benchmarkRunId = benchmarkRunId;
+        this.generatedAt = generatedAt;
+        this.profile = profile;
         this.seed = seed;
+        this.repetition = repetition;
+        this.algorithm = algorithm;
         this.resourceCount = resourceCount;
         this.requestCount = requestCount;
-        this.algorithmName = algorithmName;
+        this.backtrackingTimeLimitMs = backtrackingTimeLimitMs;
+        this.cpSatTimeLimitSeconds = cpSatTimeLimitSeconds;
+        this.totalPriorityScore = totalPriorityScore;
         this.allocatedRequests = allocatedRequests;
         this.rejectedRequests = rejectedRequests;
-        this.totalPriorityScore = totalPriorityScore;
-        this.executionTimeMs = executionTimeMs;
+        this.measuredExecutionTimeMs = measuredExecutionTimeMs;
+        this.algorithmExecutionTimeMs = algorithmExecutionTimeMs;
         this.exploredStates = exploredStates;
         this.stoppedByLimit = stoppedByLimit;
         this.algorithmStatus = algorithmStatus;
         this.objectiveValue = objectiveValue;
     }
 
+    public int getSchemaVersion() {
+        return SCHEMA_VERSION;
+    }
+
+    public String getBenchmarkRunId() {
+        return benchmarkRunId;
+    }
+
+    public Instant getGeneratedAt() {
+        return generatedAt;
+    }
+
+    public BenchmarkProfile getProfile() {
+        return profile;
+    }
+
     public String getScenarioName() {
-        return scenarioName;
+        return profile.name();
     }
 
     public long getSeed() {
         return seed;
+    }
+
+    public int getRepetition() {
+        return repetition;
+    }
+
+    public AllocationAlgorithmType getAlgorithm() {
+        return algorithm;
+    }
+
+    public String getAlgorithmName() {
+        return algorithm.name();
     }
 
     public int getResourceCount() {
@@ -70,8 +117,16 @@ public class BenchmarkResult {
         return requestCount;
     }
 
-    public String getAlgorithmName() {
-        return algorithmName;
+    public long getBacktrackingTimeLimitMs() {
+        return backtrackingTimeLimitMs;
+    }
+
+    public double getCpSatTimeLimitSeconds() {
+        return cpSatTimeLimitSeconds;
+    }
+
+    public int getTotalPriorityScore() {
+        return totalPriorityScore;
     }
 
     public int getAllocatedRequests() {
@@ -82,12 +137,16 @@ public class BenchmarkResult {
         return rejectedRequests;
     }
 
-    public int getTotalPriorityScore() {
-        return totalPriorityScore;
+    public double getMeasuredExecutionTimeMs() {
+        return measuredExecutionTimeMs;
     }
 
     public double getExecutionTimeMs() {
-        return executionTimeMs;
+        return measuredExecutionTimeMs;
+    }
+
+    public long getAlgorithmExecutionTimeMs() {
+        return algorithmExecutionTimeMs;
     }
 
     public long getExploredStates() {

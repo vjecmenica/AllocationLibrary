@@ -1,12 +1,15 @@
 package allocation.benchmark;
 
+import allocation.service.AllocationAlgorithmType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static allocation.benchmark.BenchmarkTestData.result;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,54 +19,52 @@ class BenchmarkCsvWriterTest {
     Path tempDir;
 
     @Test
-    void writerCreatesCsvWithHeaderAndRows() throws Exception {
-        Path outputPath = tempDir.resolve("benchmark.csv");
-
+    void rawWriterUsesStableHeaderAndInputOrder() throws Exception {
+        Path outputPath = tempDir.resolve("raw.csv");
         List<BenchmarkResult> results = List.of(
-                new BenchmarkResult(
-                        "Scenario, \"A\"",
-                        1001L,
-                        10,
-                        20,
-                        "GREEDY",
-                        8,
-                        12,
-                        42,
-                        5.25,
-                        0,
-                        false,
-                        null,
-                        0
-                ),
-                new BenchmarkResult(
-                        "Scenario B",
-                        1002L,
-                        10,
-                        20,
-                        "CP-SAT",
-                        9,
-                        11,
-                        50,
-                        7.75,
-                        0,
-                        false,
-                        "OPTIMAL",
-                        55.0
-                )
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 1, AllocationAlgorithmType.GREEDY, 5.25, 10, 1, false, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 1, AllocationAlgorithmType.CP_SAT, 7.75, 19, 2, false, "OPTIMAL")
         );
 
-        new BenchmarkCsvWriter().write(outputPath, results);
+        new BenchmarkCsvWriter().writeRaw(outputPath, results);
 
-        List<String> lines = Files.readAllLines(outputPath);
-
-        assertEquals(
-                "scenario,seed,resources,requests,algorithm,allocated,rejected,score,timeMs,exploredStates,stoppedByLimit,status,objectiveValue",
-                lines.get(0)
-        );
+        List<String> lines = Files.readAllLines(outputPath, StandardCharsets.UTF_8);
+        assertEquals(BenchmarkCsvWriter.RAW_HEADER, lines.get(0));
         assertEquals(3, lines.size());
-        assertTrue(lines.get(1).startsWith("\"Scenario, \"\"A\"\"\""));
-        assertTrue(lines.get(1).contains(",5.25,"));
-        assertTrue(lines.get(2).contains(",7.75,"));
-        assertTrue(lines.get(2).contains("CP-SAT"));
+        assertTrue(lines.get(1).contains(",GREEDY,"));
+        assertTrue(lines.get(2).contains(",CP_SAT,"));
+        assertTrue(lines.get(1).contains(",5.250000,"));
+    }
+
+    @Test
+    void summaryWriterUsesStableHeader() throws Exception {
+        Path outputPath = tempDir.resolve("summary.csv");
+        List<BenchmarkResult> raw = List.of(
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 1, AllocationAlgorithmType.GREEDY, 1, 10, 1, false, null),
+                result(BenchmarkProfile.BALANCED_SMALL, 42, 2, AllocationAlgorithmType.GREEDY, 3, 12, 2, false, null)
+        );
+
+        new BenchmarkCsvWriter().writeSummary(
+                outputPath,
+                BenchmarkSummaryReport.fromResults(raw).getSummaries()
+        );
+
+        List<String> lines = Files.readAllLines(outputPath, StandardCharsets.UTF_8);
+        assertEquals(BenchmarkCsvWriter.SUMMARY_HEADER, lines.get(0));
+        assertEquals(2, lines.size());
+        assertTrue(lines.get(1).contains(",2.000000,2.000000,1.000000,3.000000,"));
+    }
+
+    @Test
+    void csvEscapingAndFormulaProtectionAreAppliedOnlyToText() {
+        assertEquals("\"value,with,commas\"", BenchmarkCsv.text("value,with,commas"));
+        assertEquals("\"value \"\"quoted\"\"\"", BenchmarkCsv.text("value \"quoted\""));
+        assertEquals("\"line one\nline two\"", BenchmarkCsv.text("line one\nline two"));
+        assertEquals("'=SUM(A1:A2)", BenchmarkCsv.text("=SUM(A1:A2)"));
+        assertEquals("'  @command", BenchmarkCsv.text("  @command"));
+        assertEquals("'*value", BenchmarkCsv.text("*value"));
+        assertEquals("'-value", BenchmarkCsv.text("-value"));
+        assertEquals("'+value", BenchmarkCsv.text("+value"));
+        assertEquals("-10", BenchmarkCsv.number(-10));
     }
 }

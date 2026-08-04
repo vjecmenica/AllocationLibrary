@@ -28,6 +28,13 @@ The GitHub Actions CI workflow automatically verifies:
 
 See [docs/rest-api.md](docs/rest-api.md) for endpoint documentation and JSON examples.
 
+## Benchmarking
+
+The reproducible benchmark CLI in `allocation-core` runs GREEDY, BACKTRACKING, and CP_SAT over deterministic,
+seeded scenario profiles. It writes raw measurements, aggregate statistics, and environment metadata without
+starting the REST API. See [docs/benchmarking.md](docs/benchmarking.md) for profiles, metrics, CLI options, and
+result interpretation.
+
 ## Frontend
 
 Install and run the Angular development server:

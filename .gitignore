@@ -32,3 +32,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Local benchmark output ###
+benchmark-results/
