@@ -33,6 +33,12 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>allocation.benchmark.BenchmarkMain</mainClass>
+                    <systemProperties>
+                        <systemProperty>
+                            <key>benchmark.projectVersion</key>
+                            <value>${project.version}</value>
+                        </systemProperty>
+                    </systemProperties>
                 </configuration>
             </plugin>
         </plugins>

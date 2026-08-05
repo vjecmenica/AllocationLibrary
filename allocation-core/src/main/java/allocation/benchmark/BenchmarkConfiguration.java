@@ -3,7 +3,9 @@ package allocation.benchmark;
 import allocation.service.AllocationOptions;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class BenchmarkConfiguration {
 
@@ -24,6 +26,7 @@ public class BenchmarkConfiguration {
     private final int scaleResourceCount;
     private final int scaleRequestCount;
     private final int scaleResourceTypeCount;
+    private final boolean overwrite;
 
     public BenchmarkConfiguration(
             List<BenchmarkProfile> profiles,
@@ -36,6 +39,34 @@ public class BenchmarkConfiguration {
             int scaleResourceCount,
             int scaleRequestCount,
             int scaleResourceTypeCount
+    ) {
+        this(
+                profiles,
+                seeds,
+                warmupRuns,
+                measuredRuns,
+                backtrackingTimeLimitMs,
+                cpSatTimeLimitSeconds,
+                outputDirectory,
+                scaleResourceCount,
+                scaleRequestCount,
+                scaleResourceTypeCount,
+                false
+        );
+    }
+
+    public BenchmarkConfiguration(
+            List<BenchmarkProfile> profiles,
+            List<Long> seeds,
+            int warmupRuns,
+            int measuredRuns,
+            long backtrackingTimeLimitMs,
+            double cpSatTimeLimitSeconds,
+            Path outputDirectory,
+            int scaleResourceCount,
+            int scaleRequestCount,
+            int scaleResourceTypeCount,
+            boolean overwrite
     ) {
         validateProfiles(profiles);
         validateSeeds(seeds);
@@ -84,6 +115,7 @@ public class BenchmarkConfiguration {
         this.scaleResourceCount = scaleResourceCount;
         this.scaleRequestCount = scaleRequestCount;
         this.scaleResourceTypeCount = scaleResourceTypeCount;
+        this.overwrite = overwrite;
     }
 
     public BenchmarkConfiguration(
@@ -164,6 +196,10 @@ public class BenchmarkConfiguration {
         return scaleResourceTypeCount;
     }
 
+    public boolean isOverwrite() {
+        return overwrite;
+    }
+
     private static void validateProfiles(List<BenchmarkProfile> profiles) {
         if (profiles == null || profiles.isEmpty()) {
             throw new IllegalArgumentException("At least one benchmark profile is required.");
@@ -171,6 +207,14 @@ public class BenchmarkConfiguration {
 
         if (profiles.stream().anyMatch(profile -> profile == null)) {
             throw new IllegalArgumentException("Benchmark profile list must not contain null elements.");
+        }
+
+        Set<BenchmarkProfile> uniqueProfiles = new HashSet<>();
+
+        for (BenchmarkProfile profile : profiles) {
+            if (!uniqueProfiles.add(profile)) {
+                throw new IllegalArgumentException("Duplicate benchmark profile: " + profile);
+            }
         }
     }
 
@@ -181,6 +225,14 @@ public class BenchmarkConfiguration {
 
         if (seeds.stream().anyMatch(seed -> seed == null)) {
             throw new IllegalArgumentException("Benchmark seed list must not contain null elements.");
+        }
+
+        Set<Long> uniqueSeeds = new HashSet<>();
+
+        for (Long seed : seeds) {
+            if (!uniqueSeeds.add(seed)) {
+                throw new IllegalArgumentException("Duplicate benchmark seed: " + seed);
+            }
         }
     }
 }

@@ -22,6 +22,7 @@ class BenchmarkCliArgumentsTest {
         assertEquals(1, configuration.getWarmupRuns());
         assertEquals(3, configuration.getMeasuredRuns());
         assertEquals(Path.of("benchmark-results"), configuration.getOutputDirectory());
+        assertTrue(!configuration.isOverwrite());
     }
 
     @Test
@@ -36,7 +37,8 @@ class BenchmarkCliArgumentsTest {
                 "--output", "custom-output",
                 "--resources", "12",
                 "--requests", "14",
-                "--resource-types", "4"
+                "--resource-types", "4",
+                "--overwrite"
         }).configuration();
 
         assertEquals(List.of(BenchmarkProfile.GREEDY_TRAP, BenchmarkProfile.SCALE), configuration.getProfiles());
@@ -48,6 +50,7 @@ class BenchmarkCliArgumentsTest {
         assertEquals(12, configuration.getScaleResourceCount());
         assertEquals(14, configuration.getScaleRequestCount());
         assertEquals(4, configuration.getScaleResourceTypeCount());
+        assertTrue(configuration.isOverwrite());
     }
 
     @Test
@@ -80,6 +83,24 @@ class BenchmarkCliArgumentsTest {
 
         assertTrue(parsed.helpRequested());
         assertTrue(BenchmarkCliArguments.usage().contains("--profile"));
+        assertTrue(BenchmarkCliArguments.usage().contains("--overwrite"));
+    }
+
+    @Test
+    void duplicateProfilesAndSeedsAreRejectedWithTheDuplicateValue() {
+        IllegalArgumentException profileException = assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkCliArguments.parse(new String[]{
+                        "--profile", "GREEDY_TRAP,GREEDY_TRAP"
+                })
+        );
+        IllegalArgumentException seedException = assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkCliArguments.parse(new String[]{"--seed", "42,42"})
+        );
+
+        assertTrue(profileException.getMessage().contains("GREEDY_TRAP"));
+        assertTrue(seedException.getMessage().contains("42"));
     }
 
     @Test

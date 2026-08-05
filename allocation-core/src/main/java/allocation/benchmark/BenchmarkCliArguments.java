@@ -23,6 +23,7 @@ final class BenchmarkCliArguments {
               --resources <count>                  SCALE resource count (default: 20)
               --requests <count>                   SCALE request count (default: 20)
               --resource-types <count>              SCALE resource type count (default: 3)
+              --overwrite                           Replace existing benchmark output files
               --help                               Show this help
 
             Profiles: GREEDY_TRAP, BALANCED_SMALL, BALANCED_MEDIUM,
@@ -47,12 +48,18 @@ final class BenchmarkCliArguments {
         int scaleResourceCount = BenchmarkConfiguration.DEFAULT_SCALE_RESOURCE_COUNT;
         int scaleRequestCount = BenchmarkConfiguration.DEFAULT_SCALE_REQUEST_COUNT;
         int scaleResourceTypeCount = BenchmarkConfiguration.DEFAULT_SCALE_RESOURCE_TYPE_COUNT;
+        boolean overwrite = false;
 
         for (int index = 0; index < args.length; index++) {
             String argument = args[index];
 
             if ("--help".equals(argument)) {
                 return new ParsedArguments(null, true);
+            }
+
+            if ("--overwrite".equals(argument)) {
+                overwrite = true;
+                continue;
             }
 
             if (!isValueArgument(argument)) {
@@ -89,7 +96,8 @@ final class BenchmarkCliArguments {
                         outputDirectory,
                         scaleResourceCount,
                         scaleRequestCount,
-                        scaleResourceTypeCount
+                        scaleResourceTypeCount,
+                        overwrite
                 ),
                 false
         );

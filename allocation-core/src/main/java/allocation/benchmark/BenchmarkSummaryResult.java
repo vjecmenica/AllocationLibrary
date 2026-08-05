@@ -6,13 +6,16 @@ import java.time.Instant;
 
 public class BenchmarkSummaryResult {
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
 
     private final String benchmarkRunId;
     private final Instant generatedAt;
     private final BenchmarkProfile profile;
     private final long seed;
+    private final String scenarioFingerprint;
     private final AllocationAlgorithmType algorithm;
+    private final int resourceCount;
+    private final int requestCount;
     private final int measuredRuns;
     private final double averageMeasuredExecutionTimeMs;
     private final double medianMeasuredExecutionTimeMs;
@@ -30,7 +33,10 @@ public class BenchmarkSummaryResult {
             Instant generatedAt,
             BenchmarkProfile profile,
             long seed,
+            String scenarioFingerprint,
             AllocationAlgorithmType algorithm,
+            int resourceCount,
+            int requestCount,
             int measuredRuns,
             double averageMeasuredExecutionTimeMs,
             double medianMeasuredExecutionTimeMs,
@@ -47,7 +53,10 @@ public class BenchmarkSummaryResult {
         this.generatedAt = generatedAt;
         this.profile = profile;
         this.seed = seed;
+        this.scenarioFingerprint = scenarioFingerprint;
         this.algorithm = algorithm;
+        this.resourceCount = resourceCount;
+        this.requestCount = requestCount;
         this.measuredRuns = measuredRuns;
         this.averageMeasuredExecutionTimeMs = averageMeasuredExecutionTimeMs;
         this.medianMeasuredExecutionTimeMs = medianMeasuredExecutionTimeMs;
@@ -81,8 +90,20 @@ public class BenchmarkSummaryResult {
         return seed;
     }
 
+    public String getScenarioFingerprint() {
+        return scenarioFingerprint;
+    }
+
     public AllocationAlgorithmType getAlgorithm() {
         return algorithm;
+    }
+
+    public int getResourceCount() {
+        return resourceCount;
+    }
+
+    public int getRequestCount() {
+        return requestCount;
     }
 
     public int getMeasuredRuns() {

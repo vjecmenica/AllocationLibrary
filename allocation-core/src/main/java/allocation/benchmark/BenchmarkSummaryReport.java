@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 public class BenchmarkSummaryReport {
 
@@ -20,6 +21,10 @@ public class BenchmarkSummaryReport {
     public static BenchmarkSummaryReport fromResults(List<BenchmarkResult> results) {
         if (results == null) {
             throw new IllegalArgumentException("Benchmark result list must not be null.");
+        }
+
+        if (results.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Benchmark result list must not contain null elements.");
         }
 
         Map<GroupKey, List<BenchmarkResult>> grouped = new LinkedHashMap<>();
@@ -78,6 +83,7 @@ public class BenchmarkSummaryReport {
             List<BenchmarkResult> results
     ) {
         BenchmarkResult first = results.get(0);
+        validateGroup(key, results, first);
         List<Double> times = results.stream()
                 .map(BenchmarkResult::getMeasuredExecutionTimeMs)
                 .sorted()
@@ -88,7 +94,10 @@ public class BenchmarkSummaryReport {
                 first.getGeneratedAt(),
                 key.profile(),
                 key.seed(),
+                first.getScenarioFingerprint(),
                 key.algorithm(),
+                first.getResourceCount(),
+                first.getRequestCount(),
                 results.size(),
                 results.stream().mapToDouble(BenchmarkResult::getMeasuredExecutionTimeMs).average().orElse(0),
                 median(times),
@@ -101,6 +110,33 @@ public class BenchmarkSummaryReport {
                 (int) results.stream().filter(BenchmarkResult::isStoppedByLimit).count(),
                 optimalCpSatCount(key.algorithm(), results)
         );
+    }
+
+    private static void validateGroup(
+            GroupKey key,
+            List<BenchmarkResult> results,
+            BenchmarkResult first
+    ) {
+        for (BenchmarkResult result : results) {
+            if (!Objects.equals(first.getBenchmarkRunId(), result.getBenchmarkRunId())) {
+                throw new IllegalArgumentException(
+                        "Benchmark summary group contains different benchmark run IDs: " + key
+                );
+            }
+
+            if (!Objects.equals(first.getScenarioFingerprint(), result.getScenarioFingerprint())) {
+                throw new IllegalArgumentException(
+                        "Benchmark summary group contains different scenario fingerprints: " + key
+                );
+            }
+
+            if (first.getResourceCount() != result.getResourceCount()
+                    || first.getRequestCount() != result.getRequestCount()) {
+                throw new IllegalArgumentException(
+                        "Benchmark summary group contains different scenario dimensions: " + key
+                );
+            }
+        }
     }
 
     private static double median(List<Double> sortedValues) {

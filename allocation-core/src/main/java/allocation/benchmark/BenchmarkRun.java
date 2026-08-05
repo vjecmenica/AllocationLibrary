@@ -8,7 +8,7 @@ import java.util.List;
  */
 public class BenchmarkRun {
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
 
     private final String benchmarkRunId;
     private final Instant generatedAt;

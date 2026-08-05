@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static allocation.benchmark.BenchmarkTestData.result;
+import static allocation.benchmark.BenchmarkTestData.resultWithIdentity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BenchmarkSummaryReportTest {
@@ -25,6 +27,10 @@ class BenchmarkSummaryReportTest {
                 .get(0);
 
         assertEquals(4, summary.getMeasuredRuns());
+        assertEquals(2, summary.getSchemaVersion());
+        assertEquals(BenchmarkTestData.FINGERPRINT, summary.getScenarioFingerprint());
+        assertEquals(8, summary.getResourceCount());
+        assertEquals(8, summary.getRequestCount());
         assertEquals(5.0, summary.getAverageMeasuredExecutionTimeMs(), 0.0001);
         assertEquals(5.0, summary.getMedianMeasuredExecutionTimeMs(), 0.0001);
         assertEquals(1.0, summary.getMinimumMeasuredExecutionTimeMs(), 0.0001);
@@ -69,6 +75,87 @@ class BenchmarkSummaryReportTest {
                 BenchmarkSummaryReport.fromResults(results).getSummaries().stream()
                         .map(summary -> summary.getProfile() + "-" + summary.getSeed() + "-" + summary.getAlgorithm())
                         .toList()
+        );
+    }
+
+    @Test
+    void summaryRejectsNullResultElement() {
+        List<BenchmarkResult> results = new java.util.ArrayList<>();
+        results.add(result(
+                BenchmarkProfile.BALANCED_SMALL,
+                42,
+                1,
+                AllocationAlgorithmType.GREEDY,
+                1,
+                10,
+                1,
+                false,
+                null
+        ));
+        results.add(null);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkSummaryReport.fromResults(results)
+        );
+    }
+
+    @Test
+    void summaryRejectsMixedBenchmarkRunIds() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkSummaryReport.fromResults(List.of(
+                        identityResult("run-1", BenchmarkTestData.FINGERPRINT, 8, 8, 1),
+                        identityResult("run-2", BenchmarkTestData.FINGERPRINT, 8, 8, 2)
+                ))
+        );
+    }
+
+    @Test
+    void summaryRejectsMixedScenarioFingerprints() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkSummaryReport.fromResults(List.of(
+                        identityResult("run-1", "0".repeat(64), 8, 8, 1),
+                        identityResult("run-1", "1".repeat(64), 8, 8, 2)
+                ))
+        );
+    }
+
+    @Test
+    void summaryRejectsMixedScenarioDimensions() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkSummaryReport.fromResults(List.of(
+                        identityResult("run-1", BenchmarkTestData.FINGERPRINT, 8, 8, 1),
+                        identityResult("run-1", BenchmarkTestData.FINGERPRINT, 9, 8, 2)
+                ))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> BenchmarkSummaryReport.fromResults(List.of(
+                        identityResult("run-1", BenchmarkTestData.FINGERPRINT, 8, 8, 1),
+                        identityResult("run-1", BenchmarkTestData.FINGERPRINT, 8, 9, 2)
+                ))
+        );
+    }
+
+    private BenchmarkResult identityResult(
+            String runId,
+            String fingerprint,
+            int resourceCount,
+            int requestCount,
+            int repetition
+    ) {
+        return resultWithIdentity(
+                runId,
+                fingerprint,
+                resourceCount,
+                requestCount,
+                BenchmarkProfile.BALANCED_SMALL,
+                42,
+                repetition,
+                AllocationAlgorithmType.GREEDY
         );
     }
 }

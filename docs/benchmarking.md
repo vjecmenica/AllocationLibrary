@@ -18,10 +18,27 @@ Every profile uses a fixed scenario start and `java.util.Random` with an explici
 and SCALE configuration produce the same resources, requests, priorities, capacities, and time windows. Runtime
 measurements can still vary because they depend on the JVM, operating system, processor, and current machine load.
 
+Each generated scenario also has a lowercase 64-character SHA-256 `scenarioFingerprint`. The canonical fingerprint
+includes resource and request order, all model fields, ordered time windows and requirements, and capacity maps with
+sorted keys. Resource and request order intentionally remains significant because it can affect Greedy behavior.
+Matching seeds are not sufficient evidence of an identical experiment unless the fingerprints and source commits
+also match.
+
 ## Runs And Limits
 
 Warmup runs exercise every algorithm before measurement and are never written to result files. Measured runs are
 written individually. Each algorithm receives an independent copy of the same logical scenario for each run.
+
+Algorithm execution order rotates deterministically to reduce fixed-order timing bias:
+
+1. GREEDY, BACKTRACKING, CP_SAT
+2. BACKTRACKING, CP_SAT, GREEDY
+3. CP_SAT, GREEDY, BACKTRACKING
+
+The cycle repeats for later iterations. Warmups use the same cycle with a deterministic initial offset derived from
+the profile and seed, so scenarios with one warmup do not all favor the same first algorithm. Raw CSV rows remain
+in the canonical GREEDY, BACKTRACKING, CP_SAT order. `executionOrderPosition` records where an algorithm actually
+ran in that measured iteration.
 
 Default configuration:
 
@@ -37,6 +54,7 @@ Default configuration:
 | SCALE resources | `20` |
 | SCALE requests | `20` |
 | SCALE resource types | `3` |
+| Overwrite existing output | `false` |
 
 The time limits bound individual Backtracking and CP-SAT executions. A result stopped by a limit remains useful as
 the best solution found by that execution, but it must not be interpreted as a proven optimum.
@@ -47,7 +65,9 @@ From the repository root, package the required module and run the CLI:
 
 ```bash
 mvn -pl allocation-core -am package
-mvn -pl allocation-core exec:java -Dexec.args="--profile BALANCED_SMALL --seed 42 --runs 5"
+mvn -pl allocation-core exec:java \
+  -Dbenchmark.sourceCommit=<commit-sha> \
+  -Dexec.args="--profile GREEDY_TRAP --seed 42 --warmups 1 --runs 3 --output benchmark-results/greedy-trap"
 ```
 
 A short Greedy Trap verification run is:
@@ -70,10 +90,20 @@ Supported arguments:
 | `--resources` | Resource count for `SCALE` |
 | `--requests` | Request count for `SCALE` |
 | `--resource-types` | Resource type count for `SCALE` |
+| `--overwrite` | Replace the three benchmark files if any already exist |
 | `--help` | CLI usage |
 
 Unknown arguments, missing values, and invalid configuration values produce a non-zero exit status and print the
-usage text.
+usage text. Duplicate profiles and seeds are rejected rather than silently deduplicated.
+
+By default, the runner refuses to overwrite `raw-results.csv`, `summary-results.csv`, or `metadata.json`. Select a
+new output directory for each final experiment. To intentionally replace all three files, use:
+
+```bash
+mvn -pl allocation-core exec:java \
+  -Dbenchmark.sourceCommit=<commit-sha> \
+  -Dexec.args="--profile GREEDY_TRAP --seed 42 --runs 3 --output benchmark-results/greedy-trap --overwrite"
+```
 
 ## Metrics
 
@@ -99,7 +129,7 @@ distribution.
 ## Output Files
 
 The output directory is created automatically and contains three UTF-8 files. Local `benchmark-results/` output is
-ignored by Git.
+ignored by Git. Raw, summary, and metadata formats use `schemaVersion: 2`.
 
 ### `raw-results.csv`
 
@@ -109,7 +139,7 @@ order, repetition, then GREEDY, BACKTRACKING, and CP_SAT.
 Columns:
 
 ```text
-schemaVersion,benchmarkRunId,generatedAt,profile,seed,repetition,algorithm,resourceCount,requestCount,backtrackingTimeLimitMs,cpSatTimeLimitSeconds,totalPriorityScore,allocatedRequests,rejectedRequests,measuredExecutionTimeMs,algorithmExecutionTimeMs,exploredStates,stoppedByLimit,algorithmStatus,objectiveValue
+schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,repetition,algorithm,executionOrderPosition,resourceCount,requestCount,backtrackingTimeLimitMs,cpSatTimeLimitSeconds,totalPriorityScore,allocatedRequests,rejectedRequests,measuredExecutionTimeMs,algorithmExecutionTimeMs,exploredStates,stoppedByLimit,algorithmStatus,objectiveValue
 ```
 
 ### `summary-results.csv`
@@ -120,7 +150,7 @@ CSV output; aggregation uses unrounded values.
 Columns:
 
 ```text
-schemaVersion,benchmarkRunId,generatedAt,profile,seed,algorithm,measuredRuns,averageMeasuredExecutionTimeMs,medianMeasuredExecutionTimeMs,minimumMeasuredExecutionTimeMs,maximumMeasuredExecutionTimeMs,averageTotalPriorityScore,bestTotalPriorityScore,worstTotalPriorityScore,averageAllocatedRequests,stoppedByLimitRuns,optimalCpSatRuns
+schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,algorithm,resourceCount,requestCount,measuredRuns,averageMeasuredExecutionTimeMs,medianMeasuredExecutionTimeMs,minimumMeasuredExecutionTimeMs,maximumMeasuredExecutionTimeMs,averageTotalPriorityScore,bestTotalPriorityScore,worstTotalPriorityScore,averageAllocatedRequests,stoppedByLimitRuns,optimalCpSatRuns
 ```
 
 `optimalCpSatRuns` is counted only for CP-SAT rows. Other algorithms have no CP-SAT solver status and report zero.
@@ -130,7 +160,8 @@ schemaVersion,benchmarkRunId,generatedAt,profile,seed,algorithm,measuredRuns,ave
 The versioned metadata document contains:
 
 - benchmark run ID and UTC generation time;
-- Java version;
+- Maven project version and source commit;
+- Java version, vendor, and VM name;
 - operating system name, version, and architecture;
 - available processor count;
 - complete benchmark configuration;
@@ -139,3 +170,5 @@ The versioned metadata document contains:
 - paths to the raw, summary, and metadata files.
 
 The three files share one `benchmarkRunId`, allowing one experimental invocation to be identified consistently.
+`sourceCommit` is resolved from `benchmark.sourceCommit`, then `BENCHMARK_GIT_COMMIT`, then `GITHUB_SHA`, with
+`UNKNOWN` as the fallback. Maven supplies `projectVersion`; its fallback is also `UNKNOWN`.

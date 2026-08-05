@@ -29,8 +29,13 @@ class BenchmarkCsvWriterTest {
         new BenchmarkCsvWriter().writeRaw(outputPath, results);
 
         List<String> lines = Files.readAllLines(outputPath, StandardCharsets.UTF_8);
-        assertEquals(BenchmarkCsvWriter.RAW_HEADER, lines.get(0));
+        assertEquals(
+                "schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,repetition,algorithm,executionOrderPosition,resourceCount,requestCount,backtrackingTimeLimitMs,cpSatTimeLimitSeconds,totalPriorityScore,allocatedRequests,rejectedRequests,measuredExecutionTimeMs,algorithmExecutionTimeMs,exploredStates,stoppedByLimit,algorithmStatus,objectiveValue",
+                lines.get(0)
+        );
         assertEquals(3, lines.size());
+        assertTrue(lines.get(1).startsWith("2,"));
+        assertTrue(lines.get(1).contains("," + BenchmarkTestData.FINGERPRINT + ",1,GREEDY,1,"));
         assertTrue(lines.get(1).contains(",GREEDY,"));
         assertTrue(lines.get(2).contains(",CP_SAT,"));
         assertTrue(lines.get(1).contains(",5.250000,"));
@@ -50,9 +55,15 @@ class BenchmarkCsvWriterTest {
         );
 
         List<String> lines = Files.readAllLines(outputPath, StandardCharsets.UTF_8);
-        assertEquals(BenchmarkCsvWriter.SUMMARY_HEADER, lines.get(0));
+        assertEquals(
+                "schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,algorithm,resourceCount,requestCount,measuredRuns,averageMeasuredExecutionTimeMs,medianMeasuredExecutionTimeMs,minimumMeasuredExecutionTimeMs,maximumMeasuredExecutionTimeMs,averageTotalPriorityScore,bestTotalPriorityScore,worstTotalPriorityScore,averageAllocatedRequests,stoppedByLimitRuns,optimalCpSatRuns",
+                lines.get(0)
+        );
         assertEquals(2, lines.size());
+        assertTrue(lines.get(1).startsWith("2,"));
+        assertTrue(lines.get(1).contains("," + BenchmarkTestData.FINGERPRINT + ",GREEDY,8,8,2,"));
         assertTrue(lines.get(1).contains(",2.000000,2.000000,1.000000,3.000000,"));
+        assertTrue(Files.readString(outputPath).endsWith("\r\n"));
     }
 
     @Test

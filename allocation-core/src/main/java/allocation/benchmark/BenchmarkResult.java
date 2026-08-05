@@ -9,14 +9,16 @@ import java.time.Instant;
  */
 public class BenchmarkResult {
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
 
     private final String benchmarkRunId;
     private final Instant generatedAt;
     private final BenchmarkProfile profile;
     private final long seed;
+    private final String scenarioFingerprint;
     private final int repetition;
     private final AllocationAlgorithmType algorithm;
+    private final int executionOrderPosition;
     private final int resourceCount;
     private final int requestCount;
     private final long backtrackingTimeLimitMs;
@@ -36,8 +38,10 @@ public class BenchmarkResult {
             Instant generatedAt,
             BenchmarkProfile profile,
             long seed,
+            String scenarioFingerprint,
             int repetition,
             AllocationAlgorithmType algorithm,
+            int executionOrderPosition,
             int resourceCount,
             int requestCount,
             long backtrackingTimeLimitMs,
@@ -52,12 +56,24 @@ public class BenchmarkResult {
             String algorithmStatus,
             double objectiveValue
     ) {
+        if (scenarioFingerprint == null || !scenarioFingerprint.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException(
+                    "Scenario fingerprint must be a 64-character lowercase SHA-256 value."
+            );
+        }
+
+        if (executionOrderPosition < 1 || executionOrderPosition > 3) {
+            throw new IllegalArgumentException("Execution order position must be between 1 and 3.");
+        }
+
         this.benchmarkRunId = benchmarkRunId;
         this.generatedAt = generatedAt;
         this.profile = profile;
         this.seed = seed;
+        this.scenarioFingerprint = scenarioFingerprint;
         this.repetition = repetition;
         this.algorithm = algorithm;
+        this.executionOrderPosition = executionOrderPosition;
         this.resourceCount = resourceCount;
         this.requestCount = requestCount;
         this.backtrackingTimeLimitMs = backtrackingTimeLimitMs;
@@ -97,12 +113,20 @@ public class BenchmarkResult {
         return seed;
     }
 
+    public String getScenarioFingerprint() {
+        return scenarioFingerprint;
+    }
+
     public int getRepetition() {
         return repetition;
     }
 
     public AllocationAlgorithmType getAlgorithm() {
         return algorithm;
+    }
+
+    public int getExecutionOrderPosition() {
+        return executionOrderPosition;
     }
 
     public String getAlgorithmName() {

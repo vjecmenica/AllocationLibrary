@@ -43,6 +43,7 @@ class BenchmarkRunnerTest {
                 run.getRawResults().stream().map(BenchmarkResult::getAlgorithm).toList()
         );
         assertEquals(List.of(10, 19, 19), scores(run));
+        assertTrue(run.getRawResults().stream().allMatch(result -> result.getSchemaVersion() == 2));
         assertTrue(run.getRawResults().stream().allMatch(result -> result.getMeasuredExecutionTimeMs() >= 0));
     }
 
@@ -60,7 +61,7 @@ class BenchmarkRunnerTest {
 
     @Test
     void rawResultsUseStableRepetitionAndAlgorithmOrder() {
-        BenchmarkRun run = runner(new CountingResourceAllocator(false)).run(configuration(0, 2));
+        BenchmarkRun run = runner(new CountingResourceAllocator(false)).run(configuration(0, 3));
 
         assertEquals(
                 List.of(
@@ -69,11 +70,80 @@ class BenchmarkRunnerTest {
                         "1-CP_SAT",
                         "2-GREEDY",
                         "2-BACKTRACKING",
-                        "2-CP_SAT"
+                        "2-CP_SAT",
+                        "3-GREEDY",
+                        "3-BACKTRACKING",
+                        "3-CP_SAT"
                 ),
                 run.getRawResults().stream()
                         .map(result -> result.getRepetition() + "-" + result.getAlgorithm())
                         .toList()
+        );
+    }
+
+    @Test
+    void measuredExecutionPositionsReflectRotatedCallOrder() {
+        CountingResourceAllocator allocator = new CountingResourceAllocator(false);
+
+        BenchmarkRun run = runner(allocator).run(configuration(0, 3));
+
+        assertEquals(
+                List.of(
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.BACKTRACKING,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.BACKTRACKING,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.BACKTRACKING
+                ),
+                allocator.executedAlgorithms
+        );
+        assertEquals(
+                List.of(1, 2, 3, 3, 1, 2, 2, 3, 1),
+                run.getRawResults().stream()
+                        .map(BenchmarkResult::getExecutionOrderPosition)
+                        .toList()
+        );
+    }
+
+    @Test
+    void warmupExecutionsUseTheSameBalancedRotation() {
+        CountingResourceAllocator allocator = new CountingResourceAllocator(false);
+
+        runner(allocator).run(configuration(3, 1));
+
+        assertEquals(
+                List.of(
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.BACKTRACKING,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.BACKTRACKING,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.CP_SAT,
+                        AllocationAlgorithmType.GREEDY,
+                        AllocationAlgorithmType.BACKTRACKING
+                ),
+                allocator.executedAlgorithms.subList(0, 9)
+        );
+    }
+
+    @Test
+    void everyAlgorithmAndRepetitionSharesOneScenarioFingerprint() {
+        BenchmarkRun run = runner(new CountingResourceAllocator(false)).run(configuration(0, 3));
+
+        assertEquals(
+                1,
+                run.getRawResults().stream()
+                        .map(BenchmarkResult::getScenarioFingerprint)
+                        .distinct()
+                        .count()
+        );
+        assertTrue(
+                run.getRawResults().get(0).getScenarioFingerprint().matches("[0-9a-f]{64}")
         );
     }
 
@@ -133,6 +203,7 @@ class BenchmarkRunnerTest {
 
         private final boolean mutateInput;
         private int callCount;
+        private final List<AllocationAlgorithmType> executedAlgorithms = new ArrayList<>();
 
         private CountingResourceAllocator(boolean mutateInput) {
             this.mutateInput = mutateInput;
@@ -145,6 +216,7 @@ class BenchmarkRunnerTest {
                 AllocationOptions options
         ) {
             callCount++;
+            executedAlgorithms.add(options.getAlgorithmType());
 
             if (mutateInput) {
                 resources.get(0).getCapacities().put("mutated", 1);

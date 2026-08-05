@@ -1,8 +1,10 @@
 package allocation.benchmark;
 
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 public class BenchmarkOutputWriter {
 
@@ -39,10 +41,31 @@ public class BenchmarkOutputWriter {
                 outputDirectory.resolve(METADATA_FILE_NAME)
         );
 
+        validateOutputAvailability(paths, run.getConfiguration().isOverwrite());
+
         csvWriter.writeRaw(paths.rawResults(), run.getRawResults());
         csvWriter.writeSummary(paths.summaryResults(), run.getSummaryResults());
         metadataWriter.write(paths.metadata(), run, paths);
 
         return paths;
+    }
+
+    private void validateOutputAvailability(
+            BenchmarkOutputPaths paths,
+            boolean overwrite
+    ) throws FileAlreadyExistsException {
+        if (overwrite) {
+            return;
+        }
+
+        for (Path path : List.of(paths.rawResults(), paths.summaryResults(), paths.metadata())) {
+            if (Files.exists(path)) {
+                throw new FileAlreadyExistsException(
+                        path.toString(),
+                        null,
+                        "Benchmark output already exists. Choose another --output directory or use --overwrite."
+                );
+            }
+        }
     }
 }

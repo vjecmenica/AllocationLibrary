@@ -15,6 +15,7 @@ import allocation.service.ResourceAllocator;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,11 +28,8 @@ import java.util.function.Supplier;
  */
 public class BenchmarkRunner {
 
-    public static final List<AllocationAlgorithmType> ALGORITHM_ORDER = List.of(
-            AllocationAlgorithmType.GREEDY,
-            AllocationAlgorithmType.BACKTRACKING,
-            AllocationAlgorithmType.CP_SAT
-    );
+    public static final List<AllocationAlgorithmType> ALGORITHM_ORDER =
+            BenchmarkExecutionOrder.CANONICAL_ORDER;
 
     private final ResourceAllocator resourceAllocator;
     private final BenchmarkScenarioFactory scenarioFactory;
@@ -142,25 +140,44 @@ public class BenchmarkRunner {
             BenchmarkConfiguration configuration,
             List<BenchmarkResult> results
     ) {
+        String scenarioFingerprint = BenchmarkScenarioFingerprint.calculate(scenario);
+
         for (int warmup = 0; warmup < configuration.getWarmupRuns(); warmup++) {
-            for (AllocationAlgorithmType algorithm : ALGORITHM_ORDER) {
+            for (AllocationAlgorithmType algorithm : BenchmarkExecutionOrder.forWarmup(
+                    warmup + 1,
+                    profile,
+                    scenario.getSeed()
+            )) {
                 execute(scenario, configuration, algorithm);
             }
         }
 
         for (int repetition = 1; repetition <= configuration.getMeasuredRuns(); repetition++) {
-            for (AllocationAlgorithmType algorithm : ALGORITHM_ORDER) {
+            Map<AllocationAlgorithmType, MeasuredExecution> measuredExecutions =
+                    new EnumMap<>(AllocationAlgorithmType.class);
+            List<AllocationAlgorithmType> executionOrder =
+                    BenchmarkExecutionOrder.forIteration(repetition);
+
+            for (int index = 0; index < executionOrder.size(); index++) {
+                AllocationAlgorithmType algorithm = executionOrder.get(index);
                 AllocationExecutionResult execution = execute(scenario, configuration, algorithm);
+                measuredExecutions.put(algorithm, new MeasuredExecution(execution, index + 1));
+            }
+
+            for (AllocationAlgorithmType algorithm : ALGORITHM_ORDER) {
+                MeasuredExecution measuredExecution = measuredExecutions.get(algorithm);
                 results.add(
                         toBenchmarkResult(
                                 benchmarkRunId,
                                 generatedAt,
                                 profile,
                                 scenario,
+                                scenarioFingerprint,
                                 configuration,
                                 repetition,
                                 algorithm,
-                                execution
+                                measuredExecution.executionOrderPosition(),
+                                measuredExecution.execution()
                         )
                 );
             }
@@ -190,9 +207,11 @@ public class BenchmarkRunner {
             Instant generatedAt,
             BenchmarkProfile profile,
             GeneratedScenario scenario,
+            String scenarioFingerprint,
             BenchmarkConfiguration configuration,
             int repetition,
             AllocationAlgorithmType algorithm,
+            int executionOrderPosition,
             AllocationExecutionResult execution
     ) {
         AllocationResult allocationResult = execution.getAllocationResult();
@@ -203,8 +222,10 @@ public class BenchmarkRunner {
                 generatedAt,
                 profile,
                 scenario.getSeed(),
+                scenarioFingerprint,
                 repetition,
                 algorithm,
+                executionOrderPosition,
                 scenario.getResources().size(),
                 scenario.getRequests().size(),
                 configuration.getBacktrackingTimeLimitMs(),
@@ -285,6 +306,12 @@ public class BenchmarkRunner {
     private record ScenarioCopy(
             List<Resource> resources,
             List<AllocationRequest> requests
+    ) {
+    }
+
+    private record MeasuredExecution(
+            AllocationExecutionResult execution,
+            int executionOrderPosition
     ) {
     }
 }
