@@ -64,3 +64,31 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  campaign-scripts:
+    name: Benchmark campaign script checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Check Python helper syntax
+        run: python3 -c "import ast, pathlib; ast.parse(pathlib.Path('scripts/benchmark_campaign_files.py').read_text(encoding='utf-8'))"
+
+      - name: Check Bash syntax and dry run
+        run: |
+          bash -n scripts/run-benchmark-campaign.sh
+          bash scripts/run-benchmark-campaign.sh --preset extended --dry-run --skip-tests
+
+      - name: Check PowerShell dry run
+        shell: pwsh
+        run: ./scripts/run-benchmark-campaign.ps1 -Preset standard -DryRun -SkipTests

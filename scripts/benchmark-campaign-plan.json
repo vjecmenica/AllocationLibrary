@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "presets": {
+    "smoke": [
+      "greedy-trap-validation"
+    ],
+    "standard": [
+      "core-profiles",
+      "scale-10",
+      "scale-20",
+      "scale-30",
+      "scale-40"
+    ],
+    "extended": [
+      "core-profiles",
+      "scale-10",
+      "scale-20",
+      "scale-30",
+      "scale-40",
+      "limits-100ms",
+      "limits-500ms",
+      "limits-1000ms",
+      "limits-2000ms",
+      "limits-5000ms"
+    ]
+  },
+  "experiments": [
+    {
+      "experimentId": "greedy-trap-validation",
+      "profiles": "GREEDY_TRAP",
+      "seeds": "42",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 500,
+      "cpSatTimeLimitSeconds": 1.0,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "core-profiles",
+      "profiles": "BALANCED_SMALL,BALANCED_MEDIUM,CONFLICT_HEAVY,CAPACITY_HEAVY",
+      "seeds": "42,43,44,45,46",
+      "warmups": 3,
+      "measuredRuns": 9,
+      "backtrackingTimeLimitMs": 2000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "scale-10",
+      "profiles": "SCALE",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 1000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": 10,
+      "scaleRequests": 10,
+      "scaleResourceTypes": 3
+    },
+    {
+      "experimentId": "scale-20",
+      "profiles": "SCALE",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 1000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": 20,
+      "scaleRequests": 20,
+      "scaleResourceTypes": 3
+    },
+    {
+      "experimentId": "scale-30",
+      "profiles": "SCALE",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 1000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": 30,
+      "scaleRequests": 30,
+      "scaleResourceTypes": 4
+    },
+    {
+      "experimentId": "scale-40",
+      "profiles": "SCALE",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 1000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": 40,
+      "scaleRequests": 40,
+      "scaleResourceTypes": 5
+    },
+    {
+      "experimentId": "limits-100ms",
+      "profiles": "CONFLICT_HEAVY",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 100,
+      "cpSatTimeLimitSeconds": 0.1,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "limits-500ms",
+      "profiles": "CONFLICT_HEAVY",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 500,
+      "cpSatTimeLimitSeconds": 0.5,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "limits-1000ms",
+      "profiles": "CONFLICT_HEAVY",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 1000,
+      "cpSatTimeLimitSeconds": 1.0,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "limits-2000ms",
+      "profiles": "CONFLICT_HEAVY",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 2000,
+      "cpSatTimeLimitSeconds": 2.0,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    },
+    {
+      "experimentId": "limits-5000ms",
+      "profiles": "CONFLICT_HEAVY",
+      "seeds": "42,43,44",
+      "warmups": 3,
+      "measuredRuns": 6,
+      "backtrackingTimeLimitMs": 5000,
+      "cpSatTimeLimitSeconds": 5.0,
+      "scaleResources": null,
+      "scaleRequests": null,
+      "scaleResourceTypes": null
+    }
+  ]
+}

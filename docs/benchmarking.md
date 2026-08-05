@@ -70,6 +70,44 @@ mvn -pl allocation-core exec:java \
   -Dexec.args="--profile GREEDY_TRAP --seed 42 --warmups 1 --runs 3 --output benchmark-results/greedy-trap"
 ```
 
+For complete experimental campaigns, use `scripts/run-benchmark-campaign.ps1` on Windows or
+`scripts/run-benchmark-campaign.sh` on Unix-like systems. Both read the same versioned campaign plan and support
+`smoke`, `standard`, and `extended` presets. The PowerShell implementation is the primary supported runner:
+
+```powershell
+./scripts/run-benchmark-campaign.ps1 -Preset smoke
+./scripts/run-benchmark-campaign.ps1 -Preset standard -DryRun
+```
+
+The Bash runner uses Python 3 from the operating system only for JSON manifest processing and CSV validation; it
+does not add a Java project dependency:
+
+```bash
+bash scripts/run-benchmark-campaign.sh --preset smoke
+bash scripts/run-benchmark-campaign.sh --preset extended --dry-run
+```
+
+By default, campaign output is written below `benchmark-results/campaigns/<short-source-commit>`. Each experiment
+has its own directory. Use a new output root for final runs. `-Overwrite` or `--overwrite` forwards the benchmark
+CLI overwrite flag without deleting unrelated files.
+
+Campaign options are:
+
+| PowerShell | Bash | Meaning |
+| --- | --- | --- |
+| `-SourceCommit` | `--source-commit` | Commit to verify and record; defaults to HEAD |
+| `-OutputRoot` | `--output-root` | Campaign root directory |
+| `-Preset` | `--preset` | `smoke`, `standard`, or `extended` |
+| `-Overwrite` | `--overwrite` | Allow replacement of known benchmark outputs |
+| `-SkipTests` | `--skip-tests` | Skip the initial `mvn test` step |
+| `-AllowDirtyWorkingTree` | `--allow-dirty-working-tree` | Permit an intentionally dirty local tree |
+| `-DryRun` | `--dry-run` | Validate and print the plan without running Maven or writing results |
+
+A successful campaign adds `campaign-manifest.json`, `campaign-raw-results.csv`, `campaign-summary.csv`, and
+`campaign-request-outcomes.csv` at its root. The combined CSV files prepend `experimentId` and `resultDirectory`
+to the unchanged columns from each experiment. Scenario snapshots remain in their experiment directories and are
+referenced by the manifest rather than concatenated.
+
 A short Greedy Trap verification run is:
 
 ```bash
@@ -209,3 +247,20 @@ consistently. Request outcome rows and scenario snapshots also retain the same `
 summary records.
 `sourceCommit` is resolved from `benchmark.sourceCommit`, then `BENCHMARK_GIT_COMMIT`, then `GITHUB_SHA`, with
 `UNKNOWN` as the fallback. Maven supplies `projectVersion`; its fallback is also `UNKNOWN`.
+
+## Running From IntelliJ IDEA
+
+Create an **Application** run configuration with:
+
+- Main class: `allocation.benchmark.BenchmarkMain`
+- Module classpath: `allocation-core`
+- JRE: Java 17
+- Working directory: `$PROJECT_DIR$`
+- Program arguments: for example,
+  `--profile GREEDY_TRAP --seed 42 --warmups 1 --runs 3 --output benchmark-results/intellij`
+- VM options: `-Dbenchmark.sourceCommit=<commit-sha> -Dbenchmark.projectVersion=1.0-SNAPSHOT`
+
+Maven supplies `benchmark.projectVersion` automatically through the `allocation-core` plugin configuration. A
+direct IntelliJ Application run does not, so the VM option must be provided manually when provenance is required.
+Use **Run**, not **Debug**, for timing measurements. The complete campaign should be launched from PowerShell or a
+terminal with one of the campaign scripts; one `BenchmarkMain` configuration represents only one experiment.

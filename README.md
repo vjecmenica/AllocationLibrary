@@ -37,6 +37,15 @@ scenario snapshots, and environment metadata without starting the REST API. See
 summary schema version 2 records remain stable; versioned outcome and snapshot exports make individual allocation
 decisions reproducible. Existing result files are protected unless `--overwrite` is explicitly supplied.
 
+## Benchmark Campaign
+
+Final experiment campaigns can be run with `scripts/run-benchmark-campaign.ps1` or
+`scripts/run-benchmark-campaign.sh`. Both support `smoke`, `standard`, and `extended` presets. Every experiment
+retains the five benchmark output files, while successful campaigns also produce combined raw, summary, and
+request-outcome CSV files. See [docs/experiment-plan.md](docs/experiment-plan.md) for the research protocol and
+[docs/benchmarking.md](docs/benchmarking.md) for execution details. Generated `benchmark-results/` directories are
+local artifacts and must not be committed.
+
 ## Frontend
 
 Install and run the Angular development server:
