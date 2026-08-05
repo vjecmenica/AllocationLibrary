@@ -45,6 +45,22 @@ class BenchmarkRunnerTest {
         assertEquals(List.of(10, 19, 19), scores(run));
         assertTrue(run.getRawResults().stream().allMatch(result -> result.getSchemaVersion() == 2));
         assertTrue(run.getRawResults().stream().allMatch(result -> result.getMeasuredExecutionTimeMs() >= 0));
+        assertEquals(6, run.getRequestOutcomes().size());
+        assertEquals(1, run.getScenarioSnapshots().size());
+        assertEquals(
+                List.of(
+                        "GREEDY-REQ_SMALL-ACCEPTED",
+                        "GREEDY-REQ_BIG-REJECTED",
+                        "BACKTRACKING-REQ_SMALL-ACCEPTED",
+                        "BACKTRACKING-REQ_BIG-ACCEPTED",
+                        "CP_SAT-REQ_SMALL-ACCEPTED",
+                        "CP_SAT-REQ_BIG-ACCEPTED"
+                ),
+                run.getRequestOutcomes().stream()
+                        .map(outcome -> outcome.getAlgorithm() + "-" + outcome.getRequestId()
+                                + "-" + outcome.getOutcome())
+                        .toList()
+        );
     }
 
     @Test
@@ -79,6 +95,15 @@ class BenchmarkRunnerTest {
                         .map(result -> result.getRepetition() + "-" + result.getAlgorithm())
                         .toList()
         );
+        assertEquals(18, run.getRequestOutcomes().size());
+        assertEquals(
+                List.of(1, 2, 3),
+                run.getRequestOutcomes().stream()
+                        .map(BenchmarkRequestOutcome::getRepetition)
+                        .distinct()
+                        .toList()
+        );
+        assertEquals(1, run.getScenarioSnapshots().size());
     }
 
     @Test
@@ -144,6 +169,15 @@ class BenchmarkRunnerTest {
         );
         assertTrue(
                 run.getRawResults().get(0).getScenarioFingerprint().matches("[0-9a-f]{64}")
+        );
+        assertTrue(run.getRequestOutcomes().stream().allMatch(outcome ->
+                outcome.getScenarioFingerprint().equals(
+                        run.getRawResults().get(0).getScenarioFingerprint()
+                )
+        ));
+        assertEquals(
+                run.getRawResults().get(0).getScenarioFingerprint(),
+                run.getScenarioSnapshots().get(0).getScenarioFingerprint()
         );
     }
 

@@ -35,6 +35,7 @@ public class BenchmarkRunner {
     private final BenchmarkScenarioFactory scenarioFactory;
     private final Clock clock;
     private final Supplier<UUID> runIdSupplier;
+    private final BenchmarkRequestOutcomeExtractor outcomeExtractor;
 
     public BenchmarkRunner() {
         this(
@@ -55,6 +56,7 @@ public class BenchmarkRunner {
         this.scenarioFactory = scenarioFactory;
         this.clock = clock;
         this.runIdSupplier = runIdSupplier;
+        this.outcomeExtractor = new BenchmarkRequestOutcomeExtractor();
     }
 
     public BenchmarkRun run(BenchmarkConfiguration configuration) {
@@ -65,17 +67,33 @@ public class BenchmarkRunner {
         String benchmarkRunId = runIdSupplier.get().toString();
         Instant generatedAt = clock.instant();
         List<BenchmarkResult> results = new ArrayList<>();
+        List<BenchmarkRequestOutcome> requestOutcomes = new ArrayList<>();
+        Map<ScenarioSnapshotKey, BenchmarkScenarioSnapshot> scenarioSnapshots =
+                new LinkedHashMap<>();
 
         for (BenchmarkProfile profile : configuration.getProfiles()) {
             for (long seed : configuration.getSeeds()) {
                 GeneratedScenario scenario = scenarioFactory.create(profile, seed, configuration);
+                String scenarioFingerprint = BenchmarkScenarioFingerprint.calculate(scenario);
+                scenarioSnapshots.putIfAbsent(
+                        new ScenarioSnapshotKey(profile, seed, scenarioFingerprint),
+                        new BenchmarkScenarioSnapshot(
+                                profile,
+                                seed,
+                                scenarioFingerprint,
+                                scenario.getResources(),
+                                scenario.getRequests()
+                        )
+                );
                 runScenario(
                         benchmarkRunId,
                         generatedAt,
                         profile,
                         scenario,
+                        scenarioFingerprint,
                         configuration,
-                        results
+                        results,
+                        requestOutcomes
                 );
             }
         }
@@ -89,7 +107,9 @@ public class BenchmarkRunner {
                 generatedAt,
                 configuration,
                 results,
-                summaries
+                summaries,
+                requestOutcomes,
+                List.copyOf(scenarioSnapshots.values())
         );
     }
 
@@ -113,14 +133,18 @@ public class BenchmarkRunner {
         String benchmarkRunId = runIdSupplier.get().toString();
         Instant generatedAt = clock.instant();
         List<BenchmarkResult> results = new ArrayList<>();
+        List<BenchmarkRequestOutcome> requestOutcomes = new ArrayList<>();
+        String scenarioFingerprint = BenchmarkScenarioFingerprint.calculate(scenario);
 
         runScenario(
                 benchmarkRunId,
                 generatedAt,
                 profile,
                 scenario,
+                scenarioFingerprint,
                 configuration,
-                results
+                results,
+                requestOutcomes
         );
 
         return new BenchmarkRun(
@@ -128,7 +152,15 @@ public class BenchmarkRunner {
                 generatedAt,
                 configuration,
                 results,
-                BenchmarkSummaryReport.fromResults(results).getSummaries()
+                BenchmarkSummaryReport.fromResults(results).getSummaries(),
+                requestOutcomes,
+                List.of(new BenchmarkScenarioSnapshot(
+                        profile,
+                        scenario.getSeed(),
+                        scenarioFingerprint,
+                        scenario.getResources(),
+                        scenario.getRequests()
+                ))
         );
     }
 
@@ -137,11 +169,11 @@ public class BenchmarkRunner {
             Instant generatedAt,
             BenchmarkProfile profile,
             GeneratedScenario scenario,
+            String scenarioFingerprint,
             BenchmarkConfiguration configuration,
-            List<BenchmarkResult> results
+            List<BenchmarkResult> results,
+            List<BenchmarkRequestOutcome> requestOutcomes
     ) {
-        String scenarioFingerprint = BenchmarkScenarioFingerprint.calculate(scenario);
-
         for (int warmup = 0; warmup < configuration.getWarmupRuns(); warmup++) {
             for (AllocationAlgorithmType algorithm : BenchmarkExecutionOrder.forWarmup(
                     warmup + 1,
@@ -166,8 +198,7 @@ public class BenchmarkRunner {
 
             for (AllocationAlgorithmType algorithm : ALGORITHM_ORDER) {
                 MeasuredExecution measuredExecution = measuredExecutions.get(algorithm);
-                results.add(
-                        toBenchmarkResult(
+                BenchmarkResult result = toBenchmarkResult(
                                 benchmarkRunId,
                                 generatedAt,
                                 profile,
@@ -178,8 +209,13 @@ public class BenchmarkRunner {
                                 algorithm,
                                 measuredExecution.executionOrderPosition(),
                                 measuredExecution.execution()
-                        )
-                );
+                        );
+                results.add(result);
+                requestOutcomes.addAll(outcomeExtractor.extract(
+                        result,
+                        scenario,
+                        measuredExecution.execution().getAllocationResult()
+                ));
             }
         }
     }
@@ -312,6 +348,13 @@ public class BenchmarkRunner {
     private record MeasuredExecution(
             AllocationExecutionResult execution,
             int executionOrderPosition
+    ) {
+    }
+
+    private record ScenarioSnapshotKey(
+            BenchmarkProfile profile,
+            long seed,
+            String scenarioFingerprint
     ) {
     }
 }

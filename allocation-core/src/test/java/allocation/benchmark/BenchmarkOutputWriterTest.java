@@ -23,7 +23,7 @@ class BenchmarkOutputWriterTest {
     Path tempDir;
 
     @Test
-    void missingOutputDirectoryIsCreatedWithAllThreeFiles() throws Exception {
+    void missingOutputDirectoryIsCreatedWithAllFiveFiles() throws Exception {
         Path outputDirectory = tempDir.resolve("nested").resolve("benchmark-results");
         BenchmarkConfiguration configuration = configuration(outputDirectory, false);
         List<BenchmarkResult> raw = List.of(
@@ -43,17 +43,21 @@ class BenchmarkOutputWriterTest {
 
         assertTrue(Files.isRegularFile(paths.rawResults()));
         assertTrue(Files.isRegularFile(paths.summaryResults()));
+        assertTrue(Files.isRegularFile(paths.requestOutcomes()));
+        assertTrue(Files.isRegularFile(paths.scenarioSnapshots()));
         assertTrue(Files.isRegularFile(paths.metadata()));
         assertEquals(4, Files.readAllLines(paths.rawResults()).size());
         assertEquals(4, Files.readAllLines(paths.summaryResults()).size());
 
         String metadata = Files.readString(paths.metadata(), StandardCharsets.UTF_8);
-        assertTrue(metadata.contains("\"schemaVersion\": 2"));
+        assertTrue(metadata.contains("\"schemaVersion\": 3"));
         assertTrue(metadata.contains("\"benchmarkRunId\": \"run-1\""));
         assertTrue(metadata.contains("\"profiles\": [\"GREEDY_TRAP\"]"));
         assertTrue(metadata.contains("\"algorithms\": [\"GREEDY\", \"BACKTRACKING\", \"CP_SAT\"]"));
         assertTrue(metadata.contains("\"rawResults\""));
         assertTrue(metadata.contains("\"summaryResults\""));
+        assertTrue(metadata.contains("\"requestOutcomes\""));
+        assertTrue(metadata.contains("\"scenarioSnapshots\""));
     }
 
     @Test
@@ -78,22 +82,31 @@ class BenchmarkOutputWriterTest {
     }
 
     @Test
-    void existingOutputIsNotChangedWithoutOverwrite() throws Exception {
-        Path outputDirectory = tempDir.resolve("protected-output");
-        Files.createDirectories(outputDirectory);
-        Path rawPath = outputDirectory.resolve(BenchmarkOutputWriter.RAW_FILE_NAME);
-        Files.writeString(rawPath, "original raw content", StandardCharsets.UTF_8);
-        BenchmarkRun run = run(configuration(outputDirectory, false));
+    void everyExistingTargetPreventsAllFiveFilesFromBeingWritten() throws Exception {
+        List<String> fileNames = outputFileNames();
 
-        FileAlreadyExistsException exception = assertThrows(
-                FileAlreadyExistsException.class,
-                () -> new BenchmarkOutputWriter().write(run)
-        );
+        for (String existingFileName : fileNames) {
+            Path outputDirectory = tempDir.resolve("protected-" + existingFileName);
+            Files.createDirectories(outputDirectory);
+            Path existingPath = outputDirectory.resolve(existingFileName);
+            Files.writeString(existingPath, "original content", StandardCharsets.UTF_8);
 
-        assertTrue(exception.getMessage().contains("--overwrite"));
-        assertEquals("original raw content", Files.readString(rawPath, StandardCharsets.UTF_8));
-        assertFalse(Files.exists(outputDirectory.resolve(BenchmarkOutputWriter.SUMMARY_FILE_NAME)));
-        assertFalse(Files.exists(outputDirectory.resolve(BenchmarkOutputWriter.METADATA_FILE_NAME)));
+            FileAlreadyExistsException exception = assertThrows(
+                    FileAlreadyExistsException.class,
+                    () -> new BenchmarkOutputWriter().write(
+                            run(configuration(outputDirectory, false))
+                    )
+            );
+
+            assertTrue(exception.getMessage().contains("--overwrite"));
+            assertEquals("original content", Files.readString(existingPath, StandardCharsets.UTF_8));
+
+            for (String fileName : fileNames) {
+                if (!fileName.equals(existingFileName)) {
+                    assertFalse(Files.exists(outputDirectory.resolve(fileName)));
+                }
+            }
+        }
     }
 
     @Test
@@ -101,11 +114,7 @@ class BenchmarkOutputWriterTest {
         Path outputDirectory = tempDir.resolve("overwrite-output");
         Files.createDirectories(outputDirectory);
 
-        for (String fileName : List.of(
-                BenchmarkOutputWriter.RAW_FILE_NAME,
-                BenchmarkOutputWriter.SUMMARY_FILE_NAME,
-                BenchmarkOutputWriter.METADATA_FILE_NAME
-        )) {
+        for (String fileName : outputFileNames()) {
             Files.writeString(outputDirectory.resolve(fileName), "old content", StandardCharsets.UTF_8);
         }
 
@@ -115,6 +124,8 @@ class BenchmarkOutputWriterTest {
 
         assertTrue(Files.readString(paths.rawResults()).startsWith("schemaVersion,"));
         assertTrue(Files.readString(paths.summaryResults()).startsWith("schemaVersion,"));
+        assertTrue(Files.readString(paths.requestOutcomes()).startsWith("schemaVersion,"));
+        assertTrue(Files.readString(paths.scenarioSnapshots()).startsWith("{"));
         assertTrue(Files.readString(paths.metadata()).startsWith("{"));
     }
 
@@ -147,6 +158,16 @@ class BenchmarkOutputWriterTest {
                 10,
                 3,
                 overwrite
+        );
+    }
+
+    private List<String> outputFileNames() {
+        return List.of(
+                BenchmarkOutputWriter.RAW_FILE_NAME,
+                BenchmarkOutputWriter.SUMMARY_FILE_NAME,
+                BenchmarkOutputWriter.REQUEST_OUTCOMES_FILE_NAME,
+                BenchmarkOutputWriter.SCENARIO_SNAPSHOTS_FILE_NAME,
+                BenchmarkOutputWriter.METADATA_FILE_NAME
         );
     }
 }

@@ -47,10 +47,12 @@ class BenchmarkMetadataWriterTest {
                 Map.of()
         );
 
-        assertTrue(json.contains("\"schemaVersion\": 2"));
+        assertTrue(json.contains("\"schemaVersion\": 3"));
         assertTrue(json.contains("\"projectVersion\": \"9.8.7\""));
         assertTrue(json.contains("\"javaVendor\": \"Test Vendor\""));
         assertTrue(json.contains("\"javaVmName\": \"Test VM\""));
+        assertTrue(json.contains("\"requestOutcomes\""));
+        assertTrue(json.contains("\"scenarioSnapshots\""));
     }
 
     @Test

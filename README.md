@@ -31,10 +31,11 @@ See [docs/rest-api.md](docs/rest-api.md) for endpoint documentation and JSON exa
 ## Benchmarking
 
 The reproducible benchmark CLI in `allocation-core` runs GREEDY, BACKTRACKING, and CP_SAT over deterministic,
-seeded scenario profiles. It writes raw measurements, aggregate statistics, and environment metadata without
-starting the REST API. See [docs/benchmarking.md](docs/benchmarking.md) for profiles, metrics, CLI options, and
-result interpretation. Benchmark schema version 2 records the scenario fingerprint, rotated execution position,
-and source provenance; existing result files are protected unless `--overwrite` is explicitly supplied.
+seeded scenario profiles. It writes raw measurements, aggregate statistics, request-level outcomes, complete
+scenario snapshots, and environment metadata without starting the REST API. See
+[docs/benchmarking.md](docs/benchmarking.md) for profiles, metrics, CLI options, and result interpretation. Raw and
+summary schema version 2 records remain stable; versioned outcome and snapshot exports make individual allocation
+decisions reproducible. Existing result files are protected unless `--overwrite` is explicitly supplied.
 
 ## Frontend
 

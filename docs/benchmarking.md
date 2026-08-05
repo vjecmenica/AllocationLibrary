@@ -90,14 +90,14 @@ Supported arguments:
 | `--resources` | Resource count for `SCALE` |
 | `--requests` | Request count for `SCALE` |
 | `--resource-types` | Resource type count for `SCALE` |
-| `--overwrite` | Replace the three benchmark files if any already exist |
+| `--overwrite` | Replace the five benchmark files if any already exist |
 | `--help` | CLI usage |
 
 Unknown arguments, missing values, and invalid configuration values produce a non-zero exit status and print the
 usage text. Duplicate profiles and seeds are rejected rather than silently deduplicated.
 
-By default, the runner refuses to overwrite `raw-results.csv`, `summary-results.csv`, or `metadata.json`. Select a
-new output directory for each final experiment. To intentionally replace all three files, use:
+By default, the runner refuses to overwrite any benchmark output if one of the five target files already exists.
+Select a new output directory for each final experiment. To intentionally replace all five files, use:
 
 ```bash
 mvn -pl allocation-core exec:java \
@@ -128,8 +128,9 @@ distribution.
 
 ## Output Files
 
-The output directory is created automatically and contains three UTF-8 files. Local `benchmark-results/` output is
-ignored by Git. Raw, summary, and metadata formats use `schemaVersion: 2`.
+The output directory is created automatically and contains five UTF-8 files. Local `benchmark-results/` output is
+ignored by Git. Raw and summary formats remain at `schemaVersion: 2`. Request outcomes and scenario snapshots begin
+at version 1, while metadata uses version 3 because it lists all five artifacts.
 
 ### `raw-results.csv`
 
@@ -155,6 +156,40 @@ schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,algori
 
 `optimalCpSatRuns` is counted only for CP-SAT rows. Other algorithms have no CP-SAT solver status and report zero.
 
+### `request-outcomes.csv`
+
+One row represents one original allocation request for one algorithm in one measured repetition. Rows follow the
+configured profile and seed order, repetition, canonical algorithm order, and original scenario request order.
+Accepted rows contain assigned resource IDs and names separated by semicolons. Rejected rows contain the existing
+algorithm rejection reason. `UNKNOWN` is used instead of silently choosing a result when an algorithm result is
+missing or internally inconsistent.
+
+Columns:
+
+```text
+schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,repetition,algorithm,executionOrderPosition,requestId,requestName,requestPriority,requestStart,requestEnd,outcome,assignedResourceIds,assignedResourceNames,rejectionReason
+```
+
+This file can be substantially larger than the aggregate files because every request is retained for every
+algorithm and measured repetition. For example, PowerShell can filter one experimental slice with:
+
+```powershell
+Import-Csv benchmark-results/request-outcomes.csv |
+  Where-Object {
+    $_.profile -eq 'CONFLICT_HEAVY' -and
+    $_.seed -eq '42' -and
+    $_.algorithm -eq 'CP_SAT' -and
+    $_.outcome -eq 'REJECTED'
+  }
+```
+
+### `scenario-snapshots.json`
+
+The version 1 document retains one complete logical input for each unique
+`profile + seed + scenarioFingerprint` combination. Resources and requests keep their original order, as do
+availability windows and requirements. Capacity map keys are sorted for stable JSON output. A scenario is not
+duplicated for each algorithm or repetition.
+
 ### `metadata.json`
 
 The versioned metadata document contains:
@@ -167,8 +202,10 @@ The versioned metadata document contains:
 - complete benchmark configuration;
 - selected profiles and seeds;
 - stable algorithm list;
-- paths to the raw, summary, and metadata files.
+- paths to the raw, summary, request outcome, scenario snapshot, and metadata files.
 
-The three files share one `benchmarkRunId`, allowing one experimental invocation to be identified consistently.
+All result artifacts share one `benchmarkRunId`, allowing one experimental invocation to be identified
+consistently. Request outcome rows and scenario snapshots also retain the same `scenarioFingerprint` as the raw and
+summary records.
 `sourceCommit` is resolved from `benchmark.sourceCommit`, then `BENCHMARK_GIT_COMMIT`, then `GITHUB_SHA`, with
 `UNKNOWN` as the fallback. Maven supplies `projectVersion`; its fallback is also `UNKNOWN`.

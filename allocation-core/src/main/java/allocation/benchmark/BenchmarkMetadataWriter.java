@@ -92,6 +92,10 @@ public class BenchmarkMetadataWriter {
                 .append("  \"files\": {\n")
                 .append("    \"rawResults\": ").append(quoted(outputPaths.rawResults().toString())).append(",\n")
                 .append("    \"summaryResults\": ").append(quoted(outputPaths.summaryResults().toString())).append(",\n")
+                .append("    \"requestOutcomes\": ")
+                .append(quoted(outputPaths.requestOutcomes().toString())).append(",\n")
+                .append("    \"scenarioSnapshots\": ")
+                .append(quoted(outputPaths.scenarioSnapshots().toString())).append(",\n")
                 .append("    \"metadata\": ").append(quoted(outputPaths.metadata().toString())).append("\n")
                 .append("  }\n")
                 .append("}\n");

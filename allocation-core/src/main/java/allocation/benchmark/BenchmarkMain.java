@@ -32,6 +32,8 @@ public class BenchmarkMain {
             output.println();
             output.println("Raw results: " + paths.rawResults().toAbsolutePath());
             output.println("Summary results: " + paths.summaryResults().toAbsolutePath());
+            output.println("Request outcomes: " + paths.requestOutcomes().toAbsolutePath());
+            output.println("Scenario snapshots: " + paths.scenarioSnapshots().toAbsolutePath());
             output.println("Metadata: " + paths.metadata().toAbsolutePath());
             return 0;
         } catch (IllegalArgumentException exception) {

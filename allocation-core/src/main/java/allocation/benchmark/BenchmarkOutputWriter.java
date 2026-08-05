@@ -10,21 +10,30 @@ public class BenchmarkOutputWriter {
 
     public static final String RAW_FILE_NAME = "raw-results.csv";
     public static final String SUMMARY_FILE_NAME = "summary-results.csv";
+    public static final String REQUEST_OUTCOMES_FILE_NAME = "request-outcomes.csv";
+    public static final String SCENARIO_SNAPSHOTS_FILE_NAME = "scenario-snapshots.json";
     public static final String METADATA_FILE_NAME = "metadata.json";
 
     private final BenchmarkCsvWriter csvWriter;
     private final BenchmarkMetadataWriter metadataWriter;
+    private final BenchmarkScenarioSnapshotWriter scenarioSnapshotWriter;
 
     public BenchmarkOutputWriter() {
-        this(new BenchmarkCsvWriter(), new BenchmarkMetadataWriter());
+        this(
+                new BenchmarkCsvWriter(),
+                new BenchmarkMetadataWriter(),
+                new BenchmarkScenarioSnapshotWriter()
+        );
     }
 
     BenchmarkOutputWriter(
             BenchmarkCsvWriter csvWriter,
-            BenchmarkMetadataWriter metadataWriter
+            BenchmarkMetadataWriter metadataWriter,
+            BenchmarkScenarioSnapshotWriter scenarioSnapshotWriter
     ) {
         this.csvWriter = csvWriter;
         this.metadataWriter = metadataWriter;
+        this.scenarioSnapshotWriter = scenarioSnapshotWriter;
     }
 
     public BenchmarkOutputPaths write(BenchmarkRun run) throws IOException {
@@ -38,6 +47,8 @@ public class BenchmarkOutputWriter {
         BenchmarkOutputPaths paths = new BenchmarkOutputPaths(
                 outputDirectory.resolve(RAW_FILE_NAME),
                 outputDirectory.resolve(SUMMARY_FILE_NAME),
+                outputDirectory.resolve(REQUEST_OUTCOMES_FILE_NAME),
+                outputDirectory.resolve(SCENARIO_SNAPSHOTS_FILE_NAME),
                 outputDirectory.resolve(METADATA_FILE_NAME)
         );
 
@@ -45,6 +56,8 @@ public class BenchmarkOutputWriter {
 
         csvWriter.writeRaw(paths.rawResults(), run.getRawResults());
         csvWriter.writeSummary(paths.summaryResults(), run.getSummaryResults());
+        csvWriter.writeRequestOutcomes(paths.requestOutcomes(), run.getRequestOutcomes());
+        scenarioSnapshotWriter.write(paths.scenarioSnapshots(), run.getScenarioSnapshots());
         metadataWriter.write(paths.metadata(), run, paths);
 
         return paths;
@@ -58,7 +71,13 @@ public class BenchmarkOutputWriter {
             return;
         }
 
-        for (Path path : List.of(paths.rawResults(), paths.summaryResults(), paths.metadata())) {
+        for (Path path : List.of(
+                paths.rawResults(),
+                paths.summaryResults(),
+                paths.requestOutcomes(),
+                paths.scenarioSnapshots(),
+                paths.metadata()
+        )) {
             if (Files.exists(path)) {
                 throw new FileAlreadyExistsException(
                         path.toString(),

@@ -58,6 +58,27 @@ public class BenchmarkCsvWriter {
             "optimalCpSatRuns"
     );
 
+    static final String REQUEST_OUTCOME_HEADER = String.join(",",
+            "schemaVersion",
+            "benchmarkRunId",
+            "generatedAt",
+            "profile",
+            "seed",
+            "scenarioFingerprint",
+            "repetition",
+            "algorithm",
+            "executionOrderPosition",
+            "requestId",
+            "requestName",
+            "requestPriority",
+            "requestStart",
+            "requestEnd",
+            "outcome",
+            "assignedResourceIds",
+            "assignedResourceNames",
+            "rejectionReason"
+    );
+
     public void writeRaw(Path outputPath, List<BenchmarkResult> results) throws IOException {
         validate(outputPath, results);
         List<String> lines = new ArrayList<>();
@@ -80,6 +101,21 @@ public class BenchmarkCsvWriter {
 
         for (BenchmarkSummaryResult result : results) {
             lines.add(summaryLine(result));
+        }
+
+        writeLines(outputPath, lines);
+    }
+
+    public void writeRequestOutcomes(
+            Path outputPath,
+            List<BenchmarkRequestOutcome> outcomes
+    ) throws IOException {
+        validate(outputPath, outcomes);
+        List<String> lines = new ArrayList<>();
+        lines.add(REQUEST_OUTCOME_HEADER);
+
+        for (BenchmarkRequestOutcome outcome : outcomes) {
+            lines.add(requestOutcomeLine(outcome));
         }
 
         writeLines(outputPath, lines);
@@ -141,6 +177,29 @@ public class BenchmarkCsvWriter {
                 decimal(result.getAverageAllocatedRequests()),
                 BenchmarkCsv.number(result.getStoppedByLimitRuns()),
                 BenchmarkCsv.number(result.getOptimalCpSatRuns())
+        );
+    }
+
+    private String requestOutcomeLine(BenchmarkRequestOutcome outcome) {
+        return String.join(",",
+                BenchmarkCsv.number(outcome.getSchemaVersion()),
+                BenchmarkCsv.text(outcome.getBenchmarkRunId()),
+                BenchmarkCsv.text(outcome.getGeneratedAt().toString()),
+                BenchmarkCsv.text(outcome.getProfile().name()),
+                BenchmarkCsv.number(outcome.getSeed()),
+                BenchmarkCsv.text(outcome.getScenarioFingerprint()),
+                BenchmarkCsv.number(outcome.getRepetition()),
+                BenchmarkCsv.text(outcome.getAlgorithm().name()),
+                BenchmarkCsv.number(outcome.getExecutionOrderPosition()),
+                BenchmarkCsv.text(outcome.getRequestId()),
+                BenchmarkCsv.text(outcome.getRequestName()),
+                BenchmarkCsv.number(outcome.getRequestPriority()),
+                BenchmarkCsv.text(outcome.getRequestStart().toString()),
+                BenchmarkCsv.text(outcome.getRequestEnd().toString()),
+                BenchmarkCsv.text(outcome.getOutcome().name()),
+                BenchmarkCsv.text(String.join(";", outcome.getAssignedResourceIds())),
+                BenchmarkCsv.text(String.join(";", outcome.getAssignedResourceNames())),
+                BenchmarkCsv.text(outcome.getRejectionReason())
         );
     }
 

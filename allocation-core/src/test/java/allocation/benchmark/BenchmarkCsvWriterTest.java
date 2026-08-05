@@ -7,6 +7,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static allocation.benchmark.BenchmarkTestData.result;
@@ -77,5 +79,45 @@ class BenchmarkCsvWriterTest {
         assertEquals("'-value", BenchmarkCsv.text("-value"));
         assertEquals("'+value", BenchmarkCsv.text("+value"));
         assertEquals("-10", BenchmarkCsv.number(-10));
+    }
+
+    @Test
+    void requestOutcomeWriterUsesStableHeaderSeparatorAndCsvEscaping() throws Exception {
+        Path outputPath = tempDir.resolve("request-outcomes.csv");
+        BenchmarkRequestOutcome outcome = new BenchmarkRequestOutcome(
+                "run-1",
+                Instant.parse("2026-09-01T08:00:00Z"),
+                BenchmarkProfile.GREEDY_TRAP,
+                42,
+                BenchmarkTestData.FINGERPRINT,
+                1,
+                AllocationAlgorithmType.GREEDY,
+                1,
+                "REQ,1",
+                "Exam \"A\"\nsecond line",
+                10,
+                LocalDateTime.parse("2026-09-01T10:00:00"),
+                LocalDateTime.parse("2026-09-01T12:00:00"),
+                BenchmarkRequestOutcomeStatus.UNKNOWN,
+                List.of("R,1", "R2"),
+                List.of("Room \"A\"", "Room B"),
+                "Reason, with \"detail\"\nand a new line"
+        );
+
+        new BenchmarkCsvWriter().writeRequestOutcomes(outputPath, List.of(outcome));
+
+        String csv = Files.readString(outputPath, StandardCharsets.UTF_8);
+        assertTrue(csv.startsWith(
+                "schemaVersion,benchmarkRunId,generatedAt,profile,seed,scenarioFingerprint,"
+                        + "repetition,algorithm,executionOrderPosition,requestId,requestName,"
+                        + "requestPriority,requestStart,requestEnd,outcome,assignedResourceIds,"
+                        + "assignedResourceNames,rejectionReason\r\n"
+        ));
+        assertTrue(csv.contains("\"REQ,1\""));
+        assertTrue(csv.contains("\"Exam \"\"A\"\"\nsecond line\""));
+        assertTrue(csv.contains("\"R,1;R2\""));
+        assertTrue(csv.contains("\"Room \"\"A\"\";Room B\""));
+        assertTrue(csv.contains("\"Reason, with \"\"detail\"\"\nand a new line\""));
+        assertTrue(csv.endsWith("\r\n"));
     }
 }
