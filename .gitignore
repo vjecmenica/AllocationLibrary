@@ -35,3 +35,7 @@ bin/
 
 ### Local benchmark output ###
 benchmark-results/
+
+### Python campaign helper ###
+__pycache__/
+*.pyc

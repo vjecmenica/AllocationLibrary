@@ -27,10 +27,10 @@ individual allocation request. The campaign uses the existing deterministic benc
 - CP_SAT will confirm `OPTIMAL` more often than BACKTRACKING completes an exhaustive search on medium and larger
   scenarios under comparable practical limits.
 - `CONFLICT_HEAVY` will increase rejection counts and expose time-limit sensitivity.
-- `CAPACITY_HEAVY` will expose differences caused by scarce high-capacity resources even when many resources have
-  the correct type.
-- Increasing time limits should improve or preserve the best score; it may change individual accepted and rejected
-  requests even when the aggregate score is unchanged.
+- `CAPACITY_HEAVY` will expose differences caused by too few resources with sufficient capacity, even when many
+  resources have the correct type.
+- Increasing time limits is expected to improve or preserve the best score, but this is an experimental hypothesis,
+  not a program guarantee. It may also change individual decisions while preserving the aggregate score.
 
 ## Variables
 
@@ -102,7 +102,7 @@ The SCALE column is `resources/requests/resource types`.
 
 ### Extended
 
-Extended contains the complete standard preset plus five `CONFLICT_HEAVY` sensitivity experiments. Each uses
+Extended already contains the complete standard preset plus five `CONFLICT_HEAVY` sensitivity experiments. Each uses
 seeds `42,43,44`, 3 warmups, and 6 measured runs.
 
 | Experiment | Backtracking limit | CP-SAT limit |
@@ -161,12 +161,13 @@ interpreted together with `stoppedByLimit` and CP-SAT `algorithmStatus`.
 
 Before using a campaign in the thesis:
 
-1. Confirm `campaignStatus` is `COMPLETED`.
-2. Confirm every experiment status is `COMPLETED`.
-3. Retain `campaign-manifest.json` and all five files from each experiment.
-4. Retain the three combined campaign CSV files.
-5. Verify source commit, Java version, machine details, fingerprints, and row counts.
-6. Record the physical-machine specification and power mode separately with the archived results.
+1. Run the `smoke` preset before the final `standard` or `extended` campaign.
+2. Confirm `campaignStatus` is `COMPLETED`.
+3. Confirm every experiment status is `COMPLETED`.
+4. Retain `campaign-manifest.json` and all five files from each experiment.
+5. Retain the three combined campaign CSV files.
+6. Verify source commit, Java version, machine details, fingerprints, and row counts.
+7. Complete the [experiment environment template](experiment-environment-template.md) and archive it with results.
 
 The campaign scripts prevent accidental reuse of an existing output root unless overwrite is explicitly enabled.
 For final experiments, a new output root is preferable to overwriting an earlier campaign.

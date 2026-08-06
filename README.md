@@ -22,7 +22,8 @@ The GitHub Actions CI workflow automatically verifies:
 
 - Maven backend tests for `allocation-core` and `allocation-api`;
 - Angular frontend tests;
-- the Angular production build.
+- the Angular production build;
+- campaign helper tests, cross-platform dry runs, and a real smoke campaign.
 
 ## REST API
 
@@ -43,8 +44,9 @@ Final experiment campaigns can be run with `scripts/run-benchmark-campaign.ps1` 
 `scripts/run-benchmark-campaign.sh`. Both support `smoke`, `standard`, and `extended` presets. Every experiment
 retains the five benchmark output files, while successful campaigns also produce combined raw, summary, and
 request-outcome CSV files. See [docs/experiment-plan.md](docs/experiment-plan.md) for the research protocol and
-[docs/benchmarking.md](docs/benchmarking.md) for execution details. Generated `benchmark-results/` directories are
-local artifacts and must not be committed.
+[docs/benchmarking.md](docs/benchmarking.md) for execution details. Record the final machine and runtime conditions
+with [docs/experiment-environment-template.md](docs/experiment-environment-template.md). Generated
+`benchmark-results/` directories are local artifacts and must not be committed.
 
 ## Frontend
 

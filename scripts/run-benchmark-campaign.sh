@@ -16,8 +16,8 @@ Usage: scripts/run-benchmark-campaign.sh [options]
   --source-commit <sha>       Commit to record; defaults to current HEAD
   --output-root <directory>   Campaign output root
   --preset <name>             smoke, standard, or extended (default: standard)
-  --overwrite                 Replace the five benchmark files in each experiment
-  --skip-tests                Skip the initial mvn test
+  --overwrite                 Replace existing benchmark outputs
+  --skip-tests                Skip the initial Maven test command
   --allow-dirty-working-tree  Permit local verification with uncommitted changes
   --dry-run                   Validate and print the campaign plan without running Maven
   --help                      Show this help
@@ -38,23 +38,15 @@ while (($#)); do
   esac
 done
 
-case "$preset" in
-  smoke|standard|extended) ;;
-  *) echo "Error: Unknown preset: $preset" >&2; exit 2 ;;
-esac
-
-for command in git mvn python3; do
-  command -v "$command" >/dev/null 2>&1 || {
-    echo "Error: Required command is not available: $command" >&2
-    exit 1
-  }
+case "$preset" in smoke|standard|extended) ;; *) echo "Error: Unknown preset: $preset" >&2; exit 2 ;; esac
+for command in git mvn java python3; do
+  command -v "$command" >/dev/null 2>&1 || { echo "Error: Required command is not available: $command" >&2; exit 1; }
 done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repository_root="$(cd "$script_dir/.." && pwd)"
 plan_path="$script_dir/benchmark-campaign-plan.json"
 helper_path="$script_dir/benchmark_campaign_files.py"
-
 [[ -f "$repository_root/pom.xml" ]] || { echo "Error: Root pom.xml was not found." >&2; exit 1; }
 [[ -d "$repository_root/allocation-core" ]] || { echo "Error: allocation-core module was not found." >&2; exit 1; }
 [[ -f "$plan_path" && -f "$helper_path" ]] || { echo "Error: Campaign support files were not found." >&2; exit 1; }
@@ -69,142 +61,124 @@ source_commit="$(git -C "$repository_root" rev-parse --verify "${source_commit}^
 short_commit="${source_commit:0:12}"
 
 working_tree_clean=true
-if [[ -n "$(git -C "$repository_root" status --porcelain --untracked-files=normal)" ]]; then
-  working_tree_clean=false
-fi
+[[ -z "$(git -C "$repository_root" status --porcelain --untracked-files=normal)" ]] || working_tree_clean=false
 if [[ "$allow_dirty" == false && "$working_tree_clean" == false ]]; then
   echo "Error: Git working tree must be clean. Use --allow-dirty-working-tree only for intentional local verification." >&2
   exit 1
 fi
 
 [[ -n "$output_root" ]] || output_root="benchmark-results/campaigns/$short_commit"
-if [[ "$output_root" != /* ]]; then
-  output_root="$repository_root/$output_root"
-fi
+[[ "$output_root" == /* ]] || output_root="$repository_root/$output_root"
 if [[ -e "$output_root" && "$overwrite" == false ]]; then
   echo "Error: Campaign output already exists: $output_root. Choose another --output-root or use --overwrite." >&2
   exit 1
 fi
 
-plan_output="$(python3 "$helper_path" plan --plan "$plan_path" --preset "$preset")"
+plan_output="$(python3 "$helper_path" plan --plan "$plan_path" --preset "$preset" --output-root "$output_root")"
 experiments=()
-while IFS= read -r line; do
-  experiments+=("$line")
-done <<<"$plan_output"
+while IFS= read -r line; do experiments+=("${line%$'\r'}"); done <<<"$plan_output"
 (( ${#experiments[@]} > 0 )) || { echo "Error: Campaign plan is empty." >&2; exit 1; }
-seen_ids="|"
-seen_outputs="|"
 
-print_command() {
-  local id="$1" profiles="$2" seeds="$3" warmups="$4" runs="$5" bt="$6" cp="$7"
-  local resources="$8" requests="$9" resource_types="${10}" experiment_output="${11}"
-  local args="--profile $profiles --seed $seeds --warmups $warmups --runs $runs --backtracking-limit-ms $bt --cp-sat-limit-seconds $cp --output $experiment_output"
-  if [[ -n "$resources" ]]; then
-    args+=" --resources $resources --requests $requests --resource-types $resource_types"
-  fi
-  [[ "$overwrite" == false ]] || args+=" --overwrite"
-  printf 'mvn -pl allocation-core exec:java "-Dbenchmark.sourceCommit=%s" "-Dexec.args=%s"\n' "$source_commit" "$args"
+helper_overwrite=()
+[[ "$overwrite" == false ]] || helper_overwrite=(--overwrite)
+
+exec_args_for() {
+  local id="$1" output="$2"
+  python3 "$helper_path" exec-args --plan "$plan_path" --preset "$preset" \
+    --experiment-id "$id" --output-dir "$output" "${helper_overwrite[@]}"
 }
 
-for line in "${experiments[@]}"; do
-  line="${line%$'\r'}"
-  IFS='|' read -r id profiles seeds warmups runs bt cp resources requests resource_types <<<"$line"
-  [[ "$seen_ids" != *"|$id|"* ]] || { echo "Error: Duplicate experiment ID: $id" >&2; exit 1; }
-  seen_ids+="$id|"
-  ((runs % 3 == 0)) || { echo "Error: measured runs must be divisible by three: $id" >&2; exit 1; }
-  experiment_output="$output_root/$id"
-  [[ "$seen_outputs" != *"|$experiment_output|"* ]] || { echo "Error: Duplicate output directory: $experiment_output" >&2; exit 1; }
-  seen_outputs+="$experiment_output|"
-done
+display_command_for() {
+  local id="$1" output="$2"
+  python3 "$helper_path" maven-command --plan "$plan_path" --preset "$preset" \
+    --experiment-id "$id" --output-dir "$output" --source-commit "$source_commit" "${helper_overwrite[@]}"
+}
 
 if [[ "$dry_run" == true ]]; then
   echo "Preset: $preset"
   echo "Source commit: $source_commit"
   echo "Output root: $output_root"
-  [[ "$skip_tests" == true ]] || echo "mvn test"
-  echo "mvn -pl allocation-core -am package"
+  [[ "$skip_tests" == true ]] || echo "mvn -B -ntp test"
+  echo "mvn -B -ntp -pl allocation-core -am package -DskipTests"
   for line in "${experiments[@]}"; do
-    line="${line%$'\r'}"
-    IFS='|' read -r id profiles seeds warmups runs bt cp resources requests resource_types <<<"$line"
-    print_command "$id" "$profiles" "$seeds" "$warmups" "$runs" "$bt" "$cp" "$resources" "$requests" "$resource_types" "$output_root/$id"
+    IFS='|' read -r id _ <<<"$line"
+    display_command_for "$id" "$output_root/$id"
   done
   exit 0
 fi
 
 cd "$repository_root"
-if [[ "$skip_tests" == false ]]; then
-  mvn test
-fi
-mvn -pl allocation-core -am package
 mkdir -p "$output_root"
-
-java_version="$(java -version 2>&1 | sed -n '1p' | tr -d '"')"
-maven_version="$(mvn --version 2>&1 | sed -n '1p')"
+manifest_path="$output_root/campaign-manifest.json"
+java_version="$(java --version 2>&1 | sed -n '1p' | sed $'s/\033\[[0-9;]*m//g' | tr -d '"')"
+maven_version="$(mvn --version 2>&1 | sed -n '1p' | sed $'s/\033\[[0-9;]*m//g')"
 operating_system="$(uname -a)"
-completed_ids=()
 
-write_failed_manifest() {
-  local failed_id="$1" exit_code="$2" error_message="$3"
-  local arguments=(
-    finalize --plan "$plan_path" --preset "$preset" --source-commit "$source_commit"
-    --output-root "$output_root" --repository-root "$repository_root"
-    --java-version "$java_version" --maven-version "$maven_version"
-    --operating-system "$operating_system" --failed-id "$failed_id"
-    --exit-code "$exit_code" --error-message "$error_message"
-  )
-  arguments+=(--working-tree-clean "$working_tree_clean")
-  [[ "$overwrite" == false ]] || arguments+=(--overwrite)
-  for completed_id in "${completed_ids[@]}"; do arguments+=(--completed-id "$completed_id"); done
-  python3 "$helper_path" "${arguments[@]}"
+init_args=(manifest-init --plan "$plan_path" --preset "$preset" --source-commit "$source_commit"
+  --output-root "$output_root" --repository-root "$repository_root" --working-tree-clean "$working_tree_clean"
+  --java-version "$java_version" --maven-version "$maven_version" --operating-system "$operating_system"
+  --manifest "$manifest_path")
+[[ "$overwrite" == false ]] || init_args+=(--overwrite)
+python3 "$helper_path" "${init_args[@]}"
+
+fail_campaign() {
+  local message="$1"
+  python3 "$helper_path" manifest-fail --manifest "$manifest_path" --error-message "$message" || true
+  echo "Error: $message" >&2
 }
 
-for line in "${experiments[@]}"; do
-  line="${line%$'\r'}"
-  IFS='|' read -r id profiles seeds warmups runs bt cp resources requests resource_types <<<"$line"
-  experiment_output="$output_root/$id"
-  benchmark_args="--profile $profiles --seed $seeds --warmups $warmups --runs $runs --backtracking-limit-ms $bt --cp-sat-limit-seconds $cp --output $experiment_output"
-  if [[ -n "$resources" ]]; then
-    benchmark_args+=" --resources $resources --requests $requests --resource-types $resource_types"
-  fi
-  [[ "$overwrite" == false ]] || benchmark_args+=" --overwrite"
+if [[ "$skip_tests" == false ]]; then
+  if ! mvn -B -ntp test; then fail_campaign "Maven tests failed."; exit 1; fi
+fi
+if ! mvn -B -ntp -pl allocation-core -am package -DskipTests; then
+  fail_campaign "Packaging allocation-core failed."
+  exit 1
+fi
 
+for line in "${experiments[@]}"; do
+  IFS='|' read -r id _ <<<"$line"
+  experiment_output="$output_root/$id"
+  benchmark_args="$(exec_args_for "$id" "$experiment_output")"
+  python3 "$helper_path" manifest-update --manifest "$manifest_path" --experiment-id "$id" --status RUNNING
   echo
   echo "==> Running experiment $id"
   set +e
   mvn -pl allocation-core exec:java "-Dbenchmark.sourceCommit=$source_commit" "-Dexec.args=$benchmark_args"
-  exit_code=$?
+  benchmark_exit=$?
   set -e
-  if ((exit_code != 0)); then
-    write_failed_manifest "$id" "$exit_code" "Benchmark command failed with exit code $exit_code."
-    exit "$exit_code"
+  if ((benchmark_exit != 0)); then
+    message="Benchmark command failed with exit code $benchmark_exit."
+    python3 "$helper_path" manifest-update --manifest "$manifest_path" --experiment-id "$id" --status FAILED \
+      --benchmark-exit-code "$benchmark_exit" --error-message "$message"
+    echo "Error: $message" >&2
+    exit "$benchmark_exit"
   fi
 
+  validation_file="$(mktemp)"
+  validation_error="$(mktemp)"
   set +e
-  validation_output="$(python3 "$helper_path" validate --plan "$plan_path" --preset "$preset" --experiment-id "$id" --output-dir "$experiment_output" --source-commit "$source_commit" 2>&1)"
+  python3 "$helper_path" validate --plan "$plan_path" --preset "$preset" --experiment-id "$id" \
+    --output-dir "$experiment_output" --source-commit "$source_commit" "${helper_overwrite[@]}" \
+    >"$validation_file" 2>"$validation_error"
   validation_exit=$?
   set -e
   if ((validation_exit != 0)); then
-    write_failed_manifest "$id" "$validation_exit" "$validation_output"
-    echo "$validation_output" >&2
+    message="$(cat "$validation_error")"
+    python3 "$helper_path" manifest-update --manifest "$manifest_path" --experiment-id "$id" --status FAILED \
+      --benchmark-exit-code 0 --validation-exit-code "$validation_exit" --error-message "$message"
+    rm -f "$validation_file" "$validation_error"
+    echo "$message" >&2
     exit "$validation_exit"
   fi
-  completed_ids+=("$id")
+  python3 "$helper_path" manifest-update --manifest "$manifest_path" --experiment-id "$id" --status COMPLETED \
+    --benchmark-exit-code 0 --validation-exit-code 0 --validation-file "$validation_file"
+  rm -f "$validation_file" "$validation_error"
 done
 
-finalize_args=(
-  finalize --plan "$plan_path" --preset "$preset" --source-commit "$source_commit"
-  --output-root "$output_root" --repository-root "$repository_root"
-  --java-version "$java_version" --maven-version "$maven_version"
-  --operating-system "$operating_system"
-)
-finalize_args+=(--working-tree-clean "$working_tree_clean")
-[[ "$overwrite" == false ]] || finalize_args+=(--overwrite)
-for completed_id in "${completed_ids[@]}"; do finalize_args+=(--completed-id "$completed_id"); done
-python3 "$helper_path" "${finalize_args[@]}"
-
+python3 "$helper_path" finalize --manifest "$manifest_path"
 echo
 echo "Campaign completed successfully."
-echo "Manifest: $output_root/campaign-manifest.json"
+echo "Manifest: $manifest_path"
 echo "Combined raw results: $output_root/campaign-raw-results.csv"
 echo "Combined summary: $output_root/campaign-summary.csv"
 echo "Combined request outcomes: $output_root/campaign-request-outcomes.csv"

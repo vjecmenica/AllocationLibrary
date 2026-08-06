@@ -108,6 +108,18 @@ A successful campaign adds `campaign-manifest.json`, `campaign-raw-results.csv`,
 to the unchanged columns from each experiment. Scenario snapshots remain in their experiment directories and are
 referenced by the manifest rather than concatenated.
 
+Without `SkipTests`, a campaign runs `mvn -B -ntp test` exactly once. Both modes then package the CLI with
+`mvn -B -ntp -pl allocation-core -am package -DskipTests`, so the package phase never repeats tests. Output paths
+may contain spaces and shell metacharacters; both runners quote the value passed through Maven `exec.args` and the
+manifest stores a platform-appropriate, copy-paste-safe Maven command.
+
+Before a final campaign, complete the
+[experiment environment template](experiment-environment-template.md) and run the `smoke` preset. The manifest is
+written with every planned experiment in `PENDING` state before execution begins, then updated through `RUNNING`,
+`COMPLETED`, or `FAILED`. `benchmarkExitCode` records the Maven benchmark process, while `validationExitCode`
+records the independent artifact validation step. This lifecycle is represented by campaign manifest
+`schemaVersion: 2`; the five per-experiment benchmark schema versions are unchanged.
+
 A short Greedy Trap verification run is:
 
 ```bash

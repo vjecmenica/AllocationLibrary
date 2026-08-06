@@ -68,7 +68,7 @@ jobs:
   campaign-scripts:
     name: Benchmark campaign script checks
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -81,14 +81,33 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Check Python helper syntax
-        run: python3 -c "import ast, pathlib; ast.parse(pathlib.Path('scripts/benchmark_campaign_files.py').read_text(encoding='utf-8'))"
+      - name: Run campaign helper tests
+        run: python3 -m unittest scripts/test_benchmark_campaign_files.py
 
-      - name: Check Bash syntax and dry run
+      - name: Check Bash syntax and extended dry run
         run: |
           bash -n scripts/run-benchmark-campaign.sh
           bash scripts/run-benchmark-campaign.sh --preset extended --dry-run --skip-tests
 
-      - name: Check PowerShell dry run
+      - name: Check PowerShell standard dry run
         shell: pwsh
         run: ./scripts/run-benchmark-campaign.ps1 -Preset standard -DryRun -SkipTests
+
+      - name: Run PowerShell smoke campaign
+        shell: pwsh
+        run: |
+          $outputRoot = Join-Path $env:RUNNER_TEMP 'campaign output'
+          ./scripts/run-benchmark-campaign.ps1 -Preset smoke -OutputRoot $outputRoot -SkipTests
+          $manifest = Get-Content (Join-Path $outputRoot 'campaign-manifest.json') -Raw | ConvertFrom-Json
+          if ($manifest.campaignStatus -ne 'COMPLETED') { throw 'Smoke campaign did not complete.' }
+          if (@($manifest.experiments | Where-Object status -ne 'COMPLETED').Count -ne 0) {
+            throw 'One or more smoke experiments did not complete.'
+          }
+          @('campaign-raw-results.csv', 'campaign-summary.csv', 'campaign-request-outcomes.csv') | ForEach-Object {
+            if (-not (Test-Path (Join-Path $outputRoot $_) -PathType Leaf)) { throw "Missing combined file: $_" }
+          }
+          @('raw-results.csv', 'summary-results.csv', 'request-outcomes.csv', 'scenario-snapshots.json', 'metadata.json') |
+            ForEach-Object {
+              $path = Join-Path (Join-Path $outputRoot 'greedy-trap-validation') $_
+              if (-not (Test-Path $path -PathType Leaf)) { throw "Missing experiment file: $_" }
+            }
