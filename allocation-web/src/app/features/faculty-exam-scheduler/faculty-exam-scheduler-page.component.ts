@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormArray,
@@ -17,6 +17,7 @@ import { finalize } from 'rxjs';
 import { FacultyExamScheduleApiService } from '../../core/api/faculty-exam-schedule-api.service';
 import {
   FacultyExamDto,
+  FacultyExamSlotDto,
   FacultyExamScheduleRequest,
   FacultyExamScheduleResponse,
   FacultyInvigilatorDto,
@@ -32,6 +33,8 @@ import {
   normalizeLocalDateTime,
   parseStudentGroups,
 } from './faculty-schedule.utils';
+
+type ConfigurationSection = 'PERIOD' | 'EXAMS' | 'ROOMS' | 'INVIGILATORS';
 
 type DailySlotForm = FormGroup<{
   id: FormControl<string>;
@@ -112,12 +115,20 @@ export class FacultyExamSchedulerPageComponent {
   private nextExamId = 4;
   private nextRoomId = 3;
   private nextInvigilatorId = 4;
+  private formRevision = 0;
 
   readonly isLoading = signal(false);
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly result = signal<FacultyExamScheduleResponse | null>(null);
   readonly resultPeriodName = signal('');
+  readonly activeConfigurationSection = signal<ConfigurationSection>('PERIOD');
+  readonly currentCalendarSlots = signal<FacultyExamSlotDto[]>([]);
+  readonly resultCalendarSlots = signal<FacultyExamSlotDto[]>([]);
+  readonly resultStale = signal(false);
+  readonly displayedCalendarSlots = computed(() =>
+    this.result() ? this.resultCalendarSlots() : this.currentCalendarSlots(),
+  );
 
   readonly form = this.formBuilder.group(
     {
@@ -148,9 +159,14 @@ export class FacultyExamSchedulerPageComponent {
   );
 
   constructor() {
+    this.refreshCalendarSlots();
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.formRevision++;
       this.errorMessage.set(null);
-      this.result.set(null);
+      this.refreshCalendarSlots();
+      if (this.result()) {
+        this.resultStale.set(true);
+      }
     });
   }
 
@@ -168,6 +184,10 @@ export class FacultyExamSchedulerPageComponent {
 
   get invigilators(): FormArray<InvigilatorForm> {
     return this.form.controls.invigilators;
+  }
+
+  selectConfigurationSection(section: ConfigurationSection): void {
+    this.activeConfigurationSection.set(section);
   }
 
   addDailySlot(): void {
@@ -243,16 +263,18 @@ export class FacultyExamSchedulerPageComponent {
 
     const request = this.createRequest();
     const periodName = this.form.controls.periodName.value.trim();
+    const requestRevision = this.formRevision;
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    this.result.set(null);
 
     this.api.scheduleExams(request)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (response) => {
           this.resultPeriodName.set(periodName);
+          this.resultCalendarSlots.set(request.slots.map((slot) => ({ ...slot })));
           this.result.set(response);
+          this.resultStale.set(this.formRevision !== requestRevision);
         },
         error: (error: unknown) => {
           this.errorMessage.set(this.userFriendlyError(error));
@@ -287,6 +309,18 @@ export class FacultyExamSchedulerPageComponent {
         availability: this.resourceAvailability(this.invigilators.at(index), fullAvailability),
       })),
     };
+  }
+
+  private refreshCalendarSlots(): void {
+    const value = this.form.getRawValue();
+    const validDailySlots = value.dailySlots.filter((slot) =>
+      isValidDailySlot(slot.startTime, slot.endTime),
+    );
+    if (!isValidDateRange(value.startDate, value.endDate) || validDailySlots.length === 0) {
+      this.currentCalendarSlots.set([]);
+      return;
+    }
+    this.currentCalendarSlots.set(generateExamSlots(value.startDate, value.endDate, validDailySlots));
   }
 
   private resourceAvailability(

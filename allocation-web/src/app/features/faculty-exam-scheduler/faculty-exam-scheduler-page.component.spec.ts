@@ -82,14 +82,16 @@ describe('FacultyExamSchedulerPageComponent', () => {
     await fixture.whenStable();
 
     const text = fixture.nativeElement.textContent as string;
-    const table = fixture.nativeElement.querySelector('[data-testid="scheduled-exams-table"]');
+    const card = fixture.nativeElement.querySelector('[data-testid="exam-card"]');
     expect(text).toContain('1 / 2 ispita raspoređeno');
-    expect(table.textContent).toContain('09:00–10:30');
-    expect(table.textContent).not.toContain('09:00–12:00');
+    expect(card.textContent).toContain('09:00–10:30');
+    expect(card.textContent).not.toContain('09:00–12:00');
   });
 
   it('should show unscheduled exams in a separate section', async () => {
     component.generateSchedule();
+    await fixture.whenStable();
+    clickScheduleTab('NERASPOREĐENI 1');
     await fixture.whenStable();
 
     const table = fixture.nativeElement.querySelector('[data-testid="unscheduled-exams-table"]');
@@ -137,8 +139,69 @@ describe('FacultyExamSchedulerPageComponent', () => {
     expect(fixture.debugElement.query(By.css('[data-testid="algorithm-select"]'))).toBeNull();
   });
 
+  it('should render configuration and schedule workspaces together', () => {
+    expect(fixture.nativeElement.querySelector('[data-testid="configuration-workspace"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="schedule-workspace"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="faculty-calendar"]')).not.toBeNull();
+  });
+
+  it('should expose all configuration tabs with current record counts', () => {
+    const tabLabels = [...fixture.nativeElement.querySelectorAll('.configuration-tabs button')]
+      .map((button: HTMLButtonElement) => button.getAttribute('aria-label'));
+
+    expect(tabLabels).toEqual(['Rok', 'Ispiti: 3', 'Sale: 2', 'Dežurni: 3']);
+  });
+
+  it('should preserve form state when switching configuration tabs', async () => {
+    component.form.controls.periodName.setValue('Septembarski rok');
+    component.selectConfigurationSection('EXAMS');
+    await fixture.whenStable();
+    component.selectConfigurationSection('PERIOD');
+    await fixture.whenStable();
+
+    expect(component.form.controls.periodName.value).toBe('Septembarski rok');
+    expect((fixture.nativeElement.querySelector('[data-testid="period-name"]') as HTMLInputElement).value)
+      .toBe('Septembarski rok');
+  });
+
+  it('should update tab counts when records are added', async () => {
+    component.addExam();
+    component.addRoom();
+    component.addInvigilator();
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.querySelector('.configuration-tabs').textContent;
+    expect(text).toContain('Ispiti4');
+    expect(text).toContain('Sale3');
+    expect(text).toContain('Dežurni4');
+  });
+
+  it('should keep the generate action inside the configuration panel', () => {
+    const configuration = fixture.nativeElement.querySelector('[data-testid="configuration-workspace"]');
+    expect(configuration.querySelector('[data-testid="generate-schedule"]')).not.toBeNull();
+  });
+
+  it('should retain a generated schedule and mark it stale after configuration changes', async () => {
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    component.form.controls.periodName.setValue('Izmenjeni rok');
+    await fixture.whenStable();
+
+    expect(component.result()).not.toBeNull();
+    expect(component.resultStale()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('Konfiguracija je izmenjena.');
+    expect(fixture.nativeElement.querySelector('[data-testid="exam-card"]')).not.toBeNull();
+  });
+
   function generateButton(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('[data-testid="generate-schedule"]');
+  }
+
+  function clickScheduleTab(label: string): void {
+    const button = [...fixture.nativeElement.querySelectorAll('.view-tabs button')]
+      .find((element: HTMLButtonElement) => element.textContent?.trim() === label) as HTMLButtonElement;
+    button.click();
   }
 });
 

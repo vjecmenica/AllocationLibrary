@@ -1,377 +1,182 @@
-<main class="faculty-page">
+<main class="faculty-shell">
   <header class="faculty-header">
-    <div class="header-mark" aria-hidden="true">IR</div>
-    <div>
-      <p class="institution-label">Studentska služba</p>
+    <div class="faculty-identity">
+      <img src="/etf-sign.png" alt="Znak Elektrotehničkog fakulteta" />
+      <div>
+        <p>Univerzitet u Beogradu</p>
+        <strong>Elektrotehnički fakultet</strong>
+      </div>
+    </div>
+    <div class="application-title">
+      <span>Studentska služba</span>
       <h1>Raspored ispita</h1>
-      <p class="header-description">
-        Definišite period, ispite, sale i dežurne, a sistem će automatski napraviti raspored.
-      </p>
     </div>
   </header>
 
-  <form [formGroup]="form" (ngSubmit)="generateSchedule()" novalidate>
-    <section class="workflow-section" aria-labelledby="period-heading">
-      <header class="section-header">
-        <span class="step-number">01</span>
-        <div>
-          <p class="section-kicker">Osnovni podaci</p>
-          <h2 id="period-heading">Ispitni rok i termini</h2>
-          <p>Period je inkluzivan, a svaki dnevni termin važi za svaki datum u periodu.</p>
-        </div>
+  <div class="faculty-workspace">
+    <form
+      class="configuration-panel"
+      data-testid="configuration-workspace"
+      [formGroup]="form"
+      (ngSubmit)="generateSchedule()"
+      novalidate
+    >
+      <header class="configuration-header">
+        <div><span>Radni prostor</span><h2>Konfiguracija</h2></div>
+        <small>Podaci ispitnog roka</small>
       </header>
 
-      <div class="form-grid period-grid">
-        <label class="wide-field">
-          <span>Naziv ispitnog roka</span>
-          <input type="text" formControlName="periodName" data-testid="period-name" />
-          @if (showError(form.controls.periodName)) {
-            <small class="field-error">Unesite naziv ispitnog roka.</small>
-          }
-        </label>
-        <label>
-          <span>Početni datum</span>
-          <input type="date" formControlName="startDate" data-testid="start-date" />
-        </label>
-        <label>
-          <span>Krajnji datum</span>
-          <input type="date" formControlName="endDate" data-testid="end-date" />
-        </label>
+      <div class="configuration-tabs" role="tablist" aria-label="Sekcije konfiguracije">
+        <button type="button" role="tab" aria-label="Rok" [attr.aria-selected]="activeConfigurationSection() === 'PERIOD'" [class.active]="activeConfigurationSection() === 'PERIOD'" (click)="selectConfigurationSection('PERIOD')"><span>Rok</span></button>
+        <button type="button" role="tab" [attr.aria-label]="'Ispiti: ' + exams.length" [attr.aria-selected]="activeConfigurationSection() === 'EXAMS'" [class.active]="activeConfigurationSection() === 'EXAMS'" (click)="selectConfigurationSection('EXAMS')"><span>Ispiti</span><strong>{{ exams.length }}</strong></button>
+        <button type="button" role="tab" [attr.aria-label]="'Sale: ' + rooms.length" [attr.aria-selected]="activeConfigurationSection() === 'ROOMS'" [class.active]="activeConfigurationSection() === 'ROOMS'" (click)="selectConfigurationSection('ROOMS')"><span>Sale</span><strong>{{ rooms.length }}</strong></button>
+        <button type="button" role="tab" [attr.aria-label]="'Dežurni: ' + invigilators.length" [attr.aria-selected]="activeConfigurationSection() === 'INVIGILATORS'" [class.active]="activeConfigurationSection() === 'INVIGILATORS'" (click)="selectConfigurationSection('INVIGILATORS')"><span>Dežurni</span><strong>{{ invigilators.length }}</strong></button>
       </div>
 
-      @if (form.hasError('dateRange') && (form.controls.startDate.touched || form.controls.endDate.touched || submitted())) {
-        <p class="section-error">Početni datum mora biti pre ili jednak krajnjem datumu.</p>
-      }
-
-      <div class="subsection-heading">
-        <div>
-          <h3>Dozvoljeni dnevni termini</h3>
-          <p>Ispit počinje tačno na početku jednog od ovih termina.</p>
-        </div>
-        <button type="button" class="secondary-action" (click)="addDailySlot()">DODAJ TERMIN</button>
-      </div>
-
-      <div class="slot-list" formArrayName="dailySlots">
-        @for (slot of dailySlots.controls; track slot.controls.id.value; let slotIndex = $index) {
-          <div class="slot-row" [formGroupName]="slotIndex">
-            <label>
-              <span>Od</span>
-              <input type="time" formControlName="startTime" />
-            </label>
-            <label>
-              <span>Do</span>
-              <input type="time" formControlName="endTime" />
-            </label>
-            <button
-              type="button"
-              class="remove-action"
-              [attr.aria-label]="'Ukloni dnevni termin ' + (slotIndex + 1)"
-              (click)="removeDailySlot(slotIndex)"
-            >
-              Ukloni
-            </button>
-            @if (showError(slot)) {
-              <small class="row-error">Kraj termina mora biti nakon početka.</small>
+      <div class="configuration-scroll">
+        @if (activeConfigurationSection() === 'PERIOD') {
+          <section class="editor-section" role="tabpanel" aria-labelledby="period-editor-title">
+            <header class="editor-heading"><span>01</span><div><h3 id="period-editor-title">Ispitni rok</h3><p>Period i dozvoljeni dnevni termini.</p></div></header>
+            <div class="field-stack">
+              <label><span>Naziv ispitnog roka</span><input type="text" formControlName="periodName" data-testid="period-name" />@if (showError(form.controls.periodName)) { <small class="field-error">Unesite naziv ispitnog roka.</small> }</label>
+              <div class="two-column-fields">
+                <label><span>Početni datum</span><input type="date" formControlName="startDate" data-testid="start-date" /></label>
+                <label><span>Krajnji datum</span><input type="date" formControlName="endDate" data-testid="end-date" /></label>
+              </div>
+            </div>
+            @if (form.hasError('dateRange') && (form.controls.startDate.touched || form.controls.endDate.touched || submitted())) {
+              <p class="section-error">Početni datum mora biti pre ili jednak krajnjem datumu.</p>
             }
-          </div>
+            <div class="list-heading"><div><h4>Dnevni termini</h4><p>Važe za svaki datum u periodu.</p></div><button type="button" class="add-action" (click)="addDailySlot()">DODAJ</button></div>
+            <div class="compact-list" formArrayName="dailySlots">
+              @for (slot of dailySlots.controls; track slot.controls.id.value; let slotIndex = $index) {
+                <div class="slot-record" [formGroupName]="slotIndex">
+                  <label><span>Od</span><input type="time" formControlName="startTime" /></label>
+                  <label><span>Do</span><input type="time" formControlName="endTime" /></label>
+                  <button type="button" class="remove-action" [attr.aria-label]="'Ukloni dnevni termin ' + (slotIndex + 1)" (click)="removeDailySlot(slotIndex)">×</button>
+                  @if (showError(slot)) { <small class="row-error">Kraj mora biti nakon početka.</small> }
+                </div>
+              }
+            </div>
+            @if (dailySlots.length === 0) { <p class="section-error">Dodajte najmanje jedan dnevni termin.</p> }
+          </section>
         }
-      </div>
-      @if (dailySlots.length === 0) {
-        <p class="section-error">Dodajte najmanje jedan dnevni termin.</p>
-      }
-    </section>
 
-    <section class="workflow-section" aria-labelledby="exams-heading">
-      <header class="section-header">
-        <span class="step-number">02</span>
-        <div>
-          <p class="section-kicker">Predmeti i grupe</p>
-          <h2 id="exams-heading">Ispiti</h2>
-          <p>Unesite zahteve za svaki predmet. Studentske grupe odvojite zarezom.</p>
-        </div>
-      </header>
-
-      <div class="table-wrap editor-table-wrap" formArrayName="exams">
-        <table class="editor-table exams-table">
-          <thead>
-            <tr>
-              <th>Šifra</th>
-              <th>Naziv predmeta</th>
-              <th>Studenata</th>
-              <th>Trajanje</th>
-              <th>Dežurnih</th>
-              <th>Studentske grupe</th>
-              <th><span class="visually-hidden">Akcije</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (exam of exams.controls; track exam.controls.id.value; let examIndex = $index) {
-              <tr [formGroupName]="examIndex">
-                <td>
-                  <input type="text" formControlName="code" aria-label="Šifra predmeta" />
-                  @if (showError(exam.controls.code)) {
-                    <small class="field-error">Obavezno</small>
-                  }
-                </td>
-                <td>
-                  <input type="text" formControlName="name" aria-label="Naziv predmeta" />
-                  @if (showError(exam.controls.name)) {
-                    <small class="field-error">Obavezno</small>
-                  }
-                </td>
-                <td>
-                  <input type="number" min="1" formControlName="studentCount" aria-label="Broj studenata" />
-                  @if (showError(exam.controls.studentCount)) {
-                    <small class="field-error">Mora biti veće od 0</small>
-                  }
-                </td>
-                <td>
-                  <div class="input-suffix">
-                    <input type="number" min="1" formControlName="durationMinutes" aria-label="Trajanje u minutima" />
-                    <span>min</span>
+        @if (activeConfigurationSection() === 'EXAMS') {
+          <section class="editor-section" role="tabpanel" aria-labelledby="exams-editor-title">
+            <header class="editor-heading"><span>02</span><div><h3 id="exams-editor-title">Ispiti</h3><p>Predmeti, trajanje i studentske grupe.</p></div></header>
+            <div class="record-list" formArrayName="exams">
+              @for (exam of exams.controls; track exam.controls.id.value; let examIndex = $index) {
+                <details class="record-card" [formGroupName]="examIndex" [open]="examIndex === exams.length - 1">
+                  <summary><div><strong>{{ exam.controls.code.value || 'Novi ispit' }}</strong><span>{{ exam.controls.name.value || 'Unesite naziv predmeta' }}</span></div><small>{{ exam.controls.studentCount.value }} stud. · {{ exam.controls.durationMinutes.value }} min</small></summary>
+                  <div class="record-editor">
+                    <div class="two-column-fields">
+                      <label><span>Šifra predmeta</span><input type="text" formControlName="code" />@if (showError(exam.controls.code)) { <small class="field-error">Obavezno polje</small> }</label>
+                      <label><span>Naziv predmeta</span><input type="text" formControlName="name" />@if (showError(exam.controls.name)) { <small class="field-error">Obavezno polje</small> }</label>
+                    </div>
+                    <div class="three-column-fields">
+                      <label><span>Studenata</span><input type="number" min="1" formControlName="studentCount" />@if (showError(exam.controls.studentCount)) { <small class="field-error">Mora biti > 0</small> }</label>
+                      <label><span>Trajanje (min)</span><input type="number" min="1" formControlName="durationMinutes" />@if (showError(exam.controls.durationMinutes)) { <small class="field-error">Mora biti > 0</small> }</label>
+                      <label><span>Dežurnih</span><input type="number" min="0" formControlName="requiredInvigilators" />@if (showError(exam.controls.requiredInvigilators)) { <small class="field-error">Mora biti ≥ 0</small> }</label>
+                    </div>
+                    <label><span>Studentske grupe</span><input type="text" formControlName="studentGroups" placeholder="SI2, RTI2" /><small class="field-help">Grupe odvojite zarezom.</small></label>
+                    <div class="record-actions"><button type="button" class="remove-text-action" (click)="removeExam(examIndex)">UKLONI ISPIT</button></div>
                   </div>
-                  @if (showError(exam.controls.durationMinutes)) {
-                    <small class="field-error">Mora biti veće od 0</small>
-                  }
-                </td>
-                <td>
-                  <input type="number" min="0" formControlName="requiredInvigilators" aria-label="Broj dežurnih" />
-                  @if (showError(exam.controls.requiredInvigilators)) {
-                    <small class="field-error">Ne može biti negativno</small>
-                  }
-                </td>
-                <td>
-                  <input type="text" formControlName="studentGroups" aria-label="Studentske grupe" placeholder="SI2, RTI2" />
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    class="remove-action compact-action"
-                    [attr.aria-label]="'Ukloni ispit ' + (examIndex + 1)"
-                    (click)="removeExam(examIndex)"
-                  >
-                    Ukloni
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-      @if (exams.length === 0) {
-        <p class="section-error">Dodajte najmanje jedan ispit.</p>
-      }
-      <button type="button" class="secondary-action add-record-action" (click)="addExam()">
-        DODAJ ISPIT
-      </button>
-    </section>
-
-    <section class="workflow-section" aria-labelledby="rooms-heading">
-      <header class="section-header">
-        <span class="step-number">03</span>
-        <div>
-          <p class="section-kicker">Prostor i kapacitet</p>
-          <h2 id="rooms-heading">Sale</h2>
-          <p>Prazna lista dostupnosti znači da sala nije dostupna ni u jednom terminu.</p>
-        </div>
-      </header>
-
-      <div class="resource-list" formArrayName="rooms">
-        @for (room of rooms.controls; track room.controls.id.value; let roomIndex = $index) {
-          <details class="resource-record" [formGroupName]="roomIndex" [open]="roomIndex === 0">
-            <summary>
-              <span>{{ room.controls.name.value || 'Nova sala' }}</span>
-              <small>Kapacitet {{ room.controls.capacity.value }}</small>
-            </summary>
-            <div class="resource-body">
-              <div class="form-grid resource-fields">
-                <label>
-                  <span>Naziv sale</span>
-                  <input type="text" formControlName="name" />
-                  @if (showError(room.controls.name)) {
-                    <small class="field-error">Unesite naziv sale.</small>
-                  }
-                </label>
-                <label>
-                  <span>Kapacitet</span>
-                  <input type="number" min="1" formControlName="capacity" />
-                  @if (showError(room.controls.capacity)) {
-                    <small class="field-error">Kapacitet mora biti veći od 0.</small>
-                  }
-                </label>
-              </div>
-
-              <label class="checkbox-field">
-                <input
-                  type="checkbox"
-                  formControlName="availableEntirePeriod"
-                  (change)="setEntirePeriodAvailability(room, $any($event.target).checked)"
-                />
-                <span>Dostupna tokom celog ispitnog roka</span>
-              </label>
-
-              @if (!room.controls.availableEntirePeriod.value) {
-                <div class="availability-editor" formArrayName="availability">
-                  @for (window of room.controls.availability.controls; track $index; let windowIndex = $index) {
-                    <div class="availability-row" [formGroupName]="windowIndex">
-                      <label>
-                        <span>Od</span>
-                        <input type="datetime-local" formControlName="start" />
-                      </label>
-                      <label>
-                        <span>Do</span>
-                        <input type="datetime-local" formControlName="end" />
-                      </label>
-                      <button type="button" class="remove-action" (click)="removeAvailability(room, windowIndex)">
-                        Ukloni
-                      </button>
-                      @if (showError(window)) {
-                        <small class="row-error">Kraj dostupnosti mora biti nakon početka.</small>
-                      }
-                    </div>
-                  }
-                  @if (room.controls.availability.length === 0) {
-                    <p class="availability-note">Sala trenutno nema definisanu dostupnost.</p>
-                  }
-                </div>
-                <button type="button" class="text-action" (click)="addAvailability(room)">
-                  DODAJ PROZOR DOSTUPNOSTI
-                </button>
+                </details>
               }
-
-              <div class="record-actions">
-                <button type="button" class="remove-action" (click)="removeRoom(roomIndex)">UKLONI SALU</button>
-              </div>
             </div>
-          </details>
+            @if (exams.length === 0) { <p class="section-error">Dodajte najmanje jedan ispit.</p> }
+            <button type="button" class="wide-add-action" (click)="addExam()">+ DODAJ ISPIT</button>
+          </section>
+        }
+
+        @if (activeConfigurationSection() === 'ROOMS') {
+          <section class="editor-section" role="tabpanel" aria-labelledby="rooms-editor-title">
+            <header class="editor-heading"><span>03</span><div><h3 id="rooms-editor-title">Sale</h3><p>Kapaciteti i vremenska dostupnost.</p></div></header>
+            <div class="record-list" formArrayName="rooms">
+              @for (room of rooms.controls; track room.controls.id.value; let roomIndex = $index) {
+                <details class="record-card" [formGroupName]="roomIndex" [open]="roomIndex === rooms.length - 1">
+                  <summary><div><strong>{{ room.controls.name.value || 'Nova sala' }}</strong><span>Prostor za održavanje ispita</span></div><small>Kapacitet {{ room.controls.capacity.value }}</small></summary>
+                  <div class="record-editor">
+                    <div class="two-column-fields">
+                      <label><span>Naziv sale</span><input type="text" formControlName="name" />@if (showError(room.controls.name)) { <small class="field-error">Obavezno polje</small> }</label>
+                      <label><span>Kapacitet</span><input type="number" min="1" formControlName="capacity" />@if (showError(room.controls.capacity)) { <small class="field-error">Mora biti > 0</small> }</label>
+                    </div>
+                    <label class="checkbox-field"><input type="checkbox" formControlName="availableEntirePeriod" (change)="setEntirePeriodAvailability(room, $any($event.target).checked)" /><span>Dostupna tokom celog ispitnog roka</span></label>
+                    @if (!room.controls.availableEntirePeriod.value) {
+                      <div class="availability-list" formArrayName="availability">
+                        @for (window of room.controls.availability.controls; track $index; let windowIndex = $index) {
+                          <div class="availability-record" [formGroupName]="windowIndex">
+                            <label><span>Od</span><input type="datetime-local" formControlName="start" /></label>
+                            <label><span>Do</span><input type="datetime-local" formControlName="end" /></label>
+                            <button type="button" class="remove-action" (click)="removeAvailability(room, windowIndex)">×</button>
+                            @if (showError(window)) { <small class="row-error">Kraj mora biti nakon početka.</small> }
+                          </div>
+                        }
+                        @if (room.controls.availability.length === 0) { <p class="availability-note">Sala trenutno nije dostupna.</p> }
+                      </div>
+                      <button type="button" class="add-action" (click)="addAvailability(room)">DODAJ DOSTUPNOST</button>
+                    }
+                    <div class="record-actions"><button type="button" class="remove-text-action" (click)="removeRoom(roomIndex)">UKLONI SALU</button></div>
+                  </div>
+                </details>
+              }
+            </div>
+            @if (rooms.length === 0) { <p class="section-error">Dodajte najmanje jednu salu.</p> }
+            <button type="button" class="wide-add-action" (click)="addRoom()">+ DODAJ SALU</button>
+          </section>
+        }
+
+        @if (activeConfigurationSection() === 'INVIGILATORS') {
+          <section class="editor-section" role="tabpanel" aria-labelledby="invigilators-editor-title">
+            <header class="editor-heading"><span>04</span><div><h3 id="invigilators-editor-title">Dežurni</h3><p>Osobe dostupne za nadzor ispita.</p></div></header>
+            <div class="record-list" formArrayName="invigilators">
+              @for (invigilator of invigilators.controls; track invigilator.controls.id.value; let invigilatorIndex = $index) {
+                <details class="record-card" [formGroupName]="invigilatorIndex" [open]="invigilatorIndex === invigilators.length - 1">
+                  <summary><div><strong>{{ invigilator.controls.name.value || 'Novi dežurni' }}</strong><span>Nadzor ispita</span></div><small>{{ invigilator.controls.availableEntirePeriod.value ? 'Ceo rok' : 'Posebni termini' }}</small></summary>
+                  <div class="record-editor">
+                    <label><span>Ime i prezime</span><input type="text" formControlName="name" />@if (showError(invigilator.controls.name)) { <small class="field-error">Obavezno polje</small> }</label>
+                    <label class="checkbox-field"><input type="checkbox" formControlName="availableEntirePeriod" (change)="setEntirePeriodAvailability(invigilator, $any($event.target).checked)" /><span>Dostupan tokom celog ispitnog roka</span></label>
+                    @if (!invigilator.controls.availableEntirePeriod.value) {
+                      <div class="availability-list" formArrayName="availability">
+                        @for (window of invigilator.controls.availability.controls; track $index; let windowIndex = $index) {
+                          <div class="availability-record" [formGroupName]="windowIndex">
+                            <label><span>Od</span><input type="datetime-local" formControlName="start" /></label>
+                            <label><span>Do</span><input type="datetime-local" formControlName="end" /></label>
+                            <button type="button" class="remove-action" (click)="removeAvailability(invigilator, windowIndex)">×</button>
+                            @if (showError(window)) { <small class="row-error">Kraj mora biti nakon početka.</small> }
+                          </div>
+                        }
+                        @if (invigilator.controls.availability.length === 0) { <p class="availability-note">Dežurni trenutno nije dostupan.</p> }
+                      </div>
+                      <button type="button" class="add-action" (click)="addAvailability(invigilator)">DODAJ DOSTUPNOST</button>
+                    }
+                    <div class="record-actions"><button type="button" class="remove-text-action" (click)="removeInvigilator(invigilatorIndex)">UKLONI DEŽURNOG</button></div>
+                  </div>
+                </details>
+              }
+            </div>
+            @if (invigilators.length === 0) { <p class="availability-note">Dodajte dežurne ako ih uneti ispiti zahtevaju.</p> }
+            <button type="button" class="wide-add-action" (click)="addInvigilator()">+ DODAJ DEŽURNOG</button>
+          </section>
         }
       </div>
-      @if (rooms.length === 0) {
-        <p class="section-error">Dodajte najmanje jednu salu.</p>
-      }
-      <button type="button" class="secondary-action add-record-action" (click)="addRoom()">
-        DODAJ SALU
-      </button>
-    </section>
 
-    <section class="workflow-section" aria-labelledby="invigilators-heading">
-      <header class="section-header">
-        <span class="step-number">04</span>
-        <div>
-          <p class="section-kicker">Nadzor ispita</p>
-          <h2 id="invigilators-heading">Dežurni</h2>
-          <p>Lista može ostati prazna ako nijedan ispit ne zahteva dežurnog.</p>
-        </div>
-      </header>
+      <footer class="configuration-footer">
+        <p>{{ exams.length }} ispita · {{ rooms.length }} sala · {{ invigilators.length }} dežurnih</p>
+        <button type="submit" class="primary-action" data-testid="generate-schedule" [disabled]="isLoading() || form.invalid">
+          {{ isLoading() ? 'GENERISANJE...' : 'GENERIŠI RASPORED' }}
+        </button>
+      </footer>
+    </form>
 
-      <div class="resource-list" formArrayName="invigilators">
-        @for (invigilator of invigilators.controls; track invigilator.controls.id.value; let invigilatorIndex = $index) {
-          <details class="resource-record" [formGroupName]="invigilatorIndex" [open]="invigilatorIndex === 0">
-            <summary>
-              <span>{{ invigilator.controls.name.value || 'Novi dežurni' }}</span>
-              <small>Dostupnost</small>
-            </summary>
-            <div class="resource-body">
-              <label>
-                <span>Ime i prezime</span>
-                <input type="text" formControlName="name" />
-                @if (showError(invigilator.controls.name)) {
-                  <small class="field-error">Unesite ime i prezime.</small>
-                }
-              </label>
-
-              <label class="checkbox-field">
-                <input
-                  type="checkbox"
-                  formControlName="availableEntirePeriod"
-                  (change)="setEntirePeriodAvailability(invigilator, $any($event.target).checked)"
-                />
-                <span>Dostupan tokom celog ispitnog roka</span>
-              </label>
-
-              @if (!invigilator.controls.availableEntirePeriod.value) {
-                <div class="availability-editor" formArrayName="availability">
-                  @for (window of invigilator.controls.availability.controls; track $index; let windowIndex = $index) {
-                    <div class="availability-row" [formGroupName]="windowIndex">
-                      <label>
-                        <span>Od</span>
-                        <input type="datetime-local" formControlName="start" />
-                      </label>
-                      <label>
-                        <span>Do</span>
-                        <input type="datetime-local" formControlName="end" />
-                      </label>
-                      <button type="button" class="remove-action" (click)="removeAvailability(invigilator, windowIndex)">
-                        Ukloni
-                      </button>
-                      @if (showError(window)) {
-                        <small class="row-error">Kraj dostupnosti mora biti nakon početka.</small>
-                      }
-                    </div>
-                  }
-                  @if (invigilator.controls.availability.length === 0) {
-                    <p class="availability-note">Dežurni trenutno nema definisanu dostupnost.</p>
-                  }
-                </div>
-                <button type="button" class="text-action" (click)="addAvailability(invigilator)">
-                  DODAJ PROZOR DOSTUPNOSTI
-                </button>
-              }
-
-              <div class="record-actions">
-                <button type="button" class="remove-action" (click)="removeInvigilator(invigilatorIndex)">
-                  UKLONI DEŽURNOG
-                </button>
-              </div>
-            </div>
-          </details>
-        }
-      </div>
-      <button type="button" class="secondary-action add-record-action" (click)="addInvigilator()">
-        DODAJ DEŽURNOG
-      </button>
-    </section>
-
-    <section class="submit-section">
-      <div>
-        <p class="section-kicker">Automatsko raspoređivanje</p>
-        <h2>Spremni za generisanje?</h2>
-        <p>Sistem će koristiti sve unete termine, kapacitete, dostupnosti i studentske grupe.</p>
-      </div>
-      <button
-        type="submit"
-        class="primary-action"
-        data-testid="generate-schedule"
-        [disabled]="isLoading() || form.invalid"
-      >
-        {{ isLoading() ? 'GENERISANJE...' : 'GENERIŠI RASPORED' }}
-      </button>
-    </section>
-  </form>
-
-  <section class="feedback-region" aria-live="polite">
-    @if (isLoading()) {
-      <div class="loading-state">
-        <span class="loading-indicator" aria-hidden="true"></span>
-        <div>
-          <strong>Raspored se generiše</strong>
-          <p>Proveravaju se termini, kapaciteti i dostupnost resursa.</p>
-        </div>
-      </div>
-    }
-
-    @if (errorMessage(); as message) {
-      <div class="api-error" role="alert">
-        <strong>Raspored nije generisan</strong>
-        <span>{{ message }}</span>
-      </div>
-    }
-
-    @if (result(); as scheduleResult) {
-      <app-faculty-exam-schedule-result
-        [result]="scheduleResult"
-        [periodName]="resultPeriodName()"
-      />
-    }
-  </section>
+    <app-faculty-exam-schedule-result
+      [slots]="displayedCalendarSlots()"
+      [result]="result()"
+      [periodName]="result() ? resultPeriodName() : form.controls.periodName.value"
+      [stale]="resultStale()"
+      [loading]="isLoading()"
+      [errorMessage]="errorMessage()"
+    />
+  </div>
 </main>

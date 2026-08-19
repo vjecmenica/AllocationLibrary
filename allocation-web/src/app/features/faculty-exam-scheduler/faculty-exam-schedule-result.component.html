@@ -1,101 +1,174 @@
-<section class="schedule-result" aria-labelledby="schedule-result-title">
-  <header class="result-header">
+<section class="schedule-workspace" data-testid="schedule-workspace" aria-labelledby="schedule-heading">
+  <header class="workspace-header">
     <div>
-      <p class="section-kicker">{{ periodName }}</p>
-      <h2 id="schedule-result-title">Raspored generisan</h2>
-      <p>
-        {{ result.statistics.scheduledExams }} / {{ result.statistics.totalExams }} ispita raspoređeno
-      </p>
+      <p class="workspace-kicker">{{ periodName || 'Kalendar ispitnog roka' }}</p>
+      <h2 id="schedule-heading">{{ result ? 'Raspored generisan' : 'Raspored nije generisan' }}</h2>
+      @if (result) {
+        <p>{{ result.statistics.scheduledExams }} / {{ result.statistics.totalExams }} ispita raspoređeno</p>
+      } @else {
+        <p>Pregled dozvoljenih termina je spreman za popunjavanje.</p>
+      }
     </div>
-    <div class="result-count" aria-label="Broj raspoređenih ispita">
-      <strong>{{ result.statistics.scheduledExams }}</strong>
-      <span>raspoređeno</span>
-    </div>
+
+    @if (result) {
+      <div class="summary-counts" aria-label="Sažetak rasporeda">
+        <div><strong>{{ result.statistics.scheduledExams }}</strong><span>raspoređeno</span></div>
+        <div><strong>{{ result.statistics.unscheduledExams }}</strong><span>neraspoređeno</span></div>
+      </div>
+    }
   </header>
 
-  <div class="result-section">
-    <div class="section-title-row">
-      <div>
-        <p class="section-kicker">Potvrđeni termini</p>
-        <h3>Raspoređeni ispiti</h3>
-      </div>
-      <span>{{ result.assignments.length }}</span>
+  @if (stale) {
+    <div class="status-banner stale-status" role="status">
+      <strong>Konfiguracija je izmenjena.</strong>
+      Ponovo generišite raspored da biste primenili izmene.
     </div>
+  }
+  @if (loading) {
+    <div class="status-banner loading-status" role="status">
+      <span class="loading-indicator" aria-hidden="true"></span>
+      Generisanje rasporeda...
+    </div>
+  }
+  @if (errorMessage) {
+    <div class="status-banner error-status" role="alert">
+      <strong>Raspored nije generisan.</strong> {{ errorMessage }}
+    </div>
+  }
 
-    @if (result.assignments.length > 0) {
-      <div class="table-wrap">
-        <table data-testid="scheduled-exams-table">
-          <thead>
-            <tr>
-              <th>Predmet</th>
-              <th>Datum</th>
-              <th>Vreme</th>
-              <th>Sala</th>
-              <th>Studenata</th>
-              <th>Dežurni</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (assignment of result.assignments; track assignment.examId) {
-              <tr>
-                <td>
-                  <strong>{{ assignment.examCode }}</strong>
-                  <span>{{ assignment.examName }}</span>
-                </td>
-                <td>{{ formatDate(assignment.slotStart) }}</td>
-                <td>
-                  {{ formatTime(assignment.slotStart) }}–{{ formatTime(assignment.actualEnd) }}
-                </td>
-                <td>
-                  <strong>{{ assignment.room.name }}</strong>
-                  <span>Kapacitet {{ assignment.room.capacity }}</span>
-                </td>
-                <td>{{ assignment.studentCount }}</td>
-                <td>{{ invigilatorNames(assignment.invigilators) }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    } @else {
-      <p class="empty-state">Nijedan ispit nije mogao da bude raspoređen sa trenutnim podacima.</p>
-    }
+  <div class="view-tabs" role="tablist" aria-label="Prikaz rasporeda">
+    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'CALENDAR'" [class.active]="activeView() === 'CALENDAR'" (click)="selectView('CALENDAR')">KALENDAR</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'DETAILS'" [class.active]="activeView() === 'DETAILS'" (click)="selectView('DETAILS')">DETALJAN PREGLED</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'UNSCHEDULED'" [class.active]="activeView() === 'UNSCHEDULED'" (click)="selectView('UNSCHEDULED')">NERASPOREĐENI {{ result?.unscheduledExams?.length ?? 0 }}</button>
   </div>
 
-  <div class="result-section unscheduled-section">
-    <div class="section-title-row">
-      <div>
-        <p class="section-kicker">Potrebna provera</p>
-        <h3>Neraspoređeni ispiti</h3>
-      </div>
-      <span>{{ result.unscheduledExams.length }}</span>
-    </div>
+  <div class="workspace-body">
+    @if (activeView() === 'CALENDAR') {
+      <div class="calendar-view" role="tabpanel" data-testid="faculty-calendar">
+        @if (!result) {
+          <div class="calendar-empty-message">
+            <strong>Raspored još nije generisan.</strong>
+            <span>Unesite podatke i izaberite „Generiši raspored“.</span>
+          </div>
+        }
 
-    @if (result.unscheduledExams.length > 0) {
-      <div class="table-wrap">
-        <table data-testid="unscheduled-exams-table">
-          <thead>
-            <tr>
-              <th>Šifra</th>
-              <th>Predmet</th>
-              <th>Studenata</th>
-              <th>Razlog</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (exam of result.unscheduledExams; track exam.examId) {
-              <tr>
-                <td><strong>{{ exam.examCode }}</strong></td>
-                <td>{{ exam.examName }}</td>
-                <td>{{ exam.studentCount }}</td>
-                <td>{{ exam.reason }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+        @if (calendar().weeks.length > 0) {
+          @for (week of calendar().weeks; track week.id) {
+            <section class="calendar-week" data-testid="calendar-week" [attr.aria-label]="week.label">
+              <h3>{{ week.label }}</h3>
+              <div class="calendar-table-wrap">
+                <table class="calendar-grid">
+                  <thead>
+                    <tr>
+                      <th class="time-heading">Termin</th>
+                      @for (day of week.days; track day.date) {
+                        <th [attr.data-date]="day.date"><span>{{ day.dayName }}</span><strong>{{ day.dateLabel }}</strong></th>
+                      }
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of week.rows; track row.startTime) {
+                      <tr>
+                        <th class="time-cell"><strong>{{ row.startTime }}</strong><span>do {{ row.endTime }}</span></th>
+                        @for (cell of row.cells; track cell.date + cell.startTime) {
+                          <td class="calendar-cell" data-testid="calendar-cell" [attr.data-date]="cell.date" [attr.data-time]="cell.startTime">
+                            @if (cell.assignments.length > 0) {
+                              @for (assignment of cell.assignments; track assignment.examId) {
+                                <button
+                                  type="button"
+                                  class="exam-card"
+                                  data-testid="exam-card"
+                                  [attr.aria-label]="'Otvori detalje ispita ' + assignment.examCode"
+                                  [attr.aria-expanded]="selectedAssignment()?.examId === assignment.examId"
+                                  (click)="openDetails(assignment)"
+                                >
+                                  <strong>{{ assignment.examCode }}</strong>
+                                  <span>{{ assignment.examName }}</span>
+                                  <small>{{ formatTime(assignment.slotStart) }}–{{ formatTime(assignment.actualEnd) }}</small>
+                                  <small>{{ assignment.room.name }}</small>
+                                </button>
+                              }
+                            } @else {
+                              <span class="empty-cell" aria-label="Nema ispita">—</span>
+                            }
+                          </td>
+                        }
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          }
+        } @else {
+          <p class="content-empty-state">Definišite ispravan period i najmanje jedan dnevni termin.</p>
+        }
       </div>
-    } @else {
-      <p class="success-state">Svi uneti ispiti su uspešno raspoređeni.</p>
+    }
+
+    @if (activeView() === 'DETAILS') {
+      <div class="table-view" role="tabpanel">
+        @if (sortedAssignments().length > 0) {
+          <div class="table-wrap">
+            <table data-testid="scheduled-exams-table">
+              <thead><tr><th>Predmet</th><th>Datum</th><th>Vreme</th><th>Sala</th><th>Studenti</th><th>Dežurni</th></tr></thead>
+              <tbody>
+                @for (assignment of sortedAssignments(); track assignment.examId) {
+                  <tr>
+                    <td><strong>{{ assignment.examCode }}</strong><span>{{ assignment.examName }}</span></td>
+                    <td>{{ formatDate(assignment.slotStart) }}</td>
+                    <td>{{ formatTime(assignment.slotStart) }}–{{ formatTime(assignment.actualEnd) }}</td>
+                    <td><strong>{{ assignment.room.name }}</strong><span>Kapacitet {{ assignment.room.capacity }}</span></td>
+                    <td>{{ assignment.studentCount }}</td>
+                    <td>{{ invigilatorNames(assignment.invigilators) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="content-empty-state">Još nema raspoređenih ispita za detaljan pregled.</p>
+        }
+      </div>
+    }
+
+    @if (activeView() === 'UNSCHEDULED') {
+      <div class="table-view" role="tabpanel">
+        @if (result?.unscheduledExams?.length) {
+          <div class="table-wrap">
+            <table data-testid="unscheduled-exams-table">
+              <thead><tr><th>Šifra</th><th>Predmet</th><th>Studenata</th><th>Razlog</th></tr></thead>
+              <tbody>
+                @for (exam of result!.unscheduledExams; track exam.examId) {
+                  <tr><td><strong>{{ exam.examCode }}</strong></td><td>{{ exam.examName }}</td><td>{{ exam.studentCount }}</td><td>{{ exam.reason }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else if (result) {
+          <p class="success-state">Svi ispiti su uspešno raspoređeni.</p>
+        } @else {
+          <p class="content-empty-state">Neraspoređeni ispiti će biti prikazani nakon generisanja.</p>
+        }
+      </div>
+    }
+
+    @if (selectedAssignment(); as assignment) {
+      <aside class="exam-details-panel" role="dialog" aria-label="Detalji ispita" data-testid="exam-details">
+        <header>
+          <div><span>Detalji ispita</span><h3>{{ assignment.examCode }}</h3></div>
+          <button type="button" aria-label="Zatvori detalje ispita" (click)="closeDetails()">×</button>
+        </header>
+        <dl>
+          <div><dt>Predmet</dt><dd>{{ assignment.examName }}</dd></div>
+          <div><dt>Datum</dt><dd>{{ formatDate(assignment.slotStart) }}</dd></div>
+          <div><dt>Vreme</dt><dd>{{ formatTime(assignment.slotStart) }}–{{ formatTime(assignment.actualEnd) }}</dd></div>
+          <div><dt>Sala</dt><dd>{{ assignment.room.name }}</dd></div>
+          <div><dt>Kapacitet sale</dt><dd>{{ assignment.room.capacity }}</dd></div>
+          <div><dt>Broj studenata</dt><dd>{{ assignment.studentCount }}</dd></div>
+          <div><dt>Dežurni</dt><dd>{{ invigilatorNames(assignment.invigilators) }}</dd></div>
+        </dl>
+      </aside>
     }
   </div>
 </section>

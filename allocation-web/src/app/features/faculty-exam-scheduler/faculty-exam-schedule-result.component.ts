@@ -1,9 +1,18 @@
-import { Component, Input } from '@angular/core';
+import { Component, HostListener, Input, signal } from '@angular/core';
 
 import {
+  FacultyExamAssignmentDto,
   FacultyExamScheduleResponse,
+  FacultyExamSlotDto,
   FacultyScheduleInvigilatorDto,
 } from '../../core/models/faculty-exam-schedule.models';
+import {
+  buildFacultyCalendar,
+  FacultyCalendarViewModel,
+  sortFacultyAssignments,
+} from './faculty-schedule-calendar.utils';
+
+type ScheduleView = 'CALENDAR' | 'DETAILS' | 'UNSCHEDULED';
 
 @Component({
   selector: 'app-faculty-exam-schedule-result',
@@ -11,8 +20,54 @@ import {
   styleUrl: './faculty-exam-schedule-result.component.scss',
 })
 export class FacultyExamScheduleResultComponent {
-  @Input({ required: true }) result!: FacultyExamScheduleResponse;
-  @Input({ required: true }) periodName = '';
+  private slotsValue: FacultyExamSlotDto[] = [];
+  private resultValue: FacultyExamScheduleResponse | null = null;
+
+  @Input() periodName = '';
+  @Input() stale = false;
+  @Input() loading = false;
+  @Input() errorMessage: string | null = null;
+
+  @Input({ required: true })
+  set slots(value: FacultyExamSlotDto[]) {
+    this.slotsValue = value ?? [];
+    this.refreshViewModel();
+  }
+
+  @Input()
+  set result(value: FacultyExamScheduleResponse | null) {
+    this.resultValue = value;
+    this.sortedAssignments.set(sortFacultyAssignments(value?.assignments ?? []));
+    this.selectedAssignment.set(null);
+    this.refreshViewModel();
+  }
+
+  get result(): FacultyExamScheduleResponse | null {
+    return this.resultValue;
+  }
+
+  readonly activeView = signal<ScheduleView>('CALENDAR');
+  readonly selectedAssignment = signal<FacultyExamAssignmentDto | null>(null);
+  readonly calendar = signal<FacultyCalendarViewModel>({ weeks: [] });
+  readonly sortedAssignments = signal<FacultyExamAssignmentDto[]>([]);
+
+  selectView(view: ScheduleView): void {
+    this.activeView.set(view);
+    this.selectedAssignment.set(null);
+  }
+
+  openDetails(assignment: FacultyExamAssignmentDto): void {
+    this.selectedAssignment.set(assignment);
+  }
+
+  closeDetails(): void {
+    this.selectedAssignment.set(null);
+  }
+
+  @HostListener('keydown.escape')
+  closeDetailsWithEscape(): void {
+    this.closeDetails();
+  }
 
   formatDate(value: string): string {
     const [date] = value.split('T');
@@ -28,5 +83,9 @@ export class FacultyExamScheduleResultComponent {
     return invigilators.length > 0
       ? invigilators.map((invigilator) => invigilator.name).join(', ')
       : 'Nisu potrebni';
+  }
+
+  private refreshViewModel(): void {
+    this.calendar.set(buildFacultyCalendar(this.slotsValue, this.resultValue?.assignments ?? []));
   }
 }
