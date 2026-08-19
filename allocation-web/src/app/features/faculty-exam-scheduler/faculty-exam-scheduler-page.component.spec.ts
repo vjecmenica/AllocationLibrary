@@ -1,0 +1,179 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { provideZonelessChangeDetection } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { of, Subject, throwError } from 'rxjs';
+
+import { FacultyExamScheduleApiService } from '../../core/api/faculty-exam-schedule-api.service';
+import {
+  FacultyExamScheduleRequest,
+  FacultyExamScheduleResponse,
+} from '../../core/models/faculty-exam-schedule.models';
+import { FacultyExamSchedulerPageComponent } from './faculty-exam-scheduler-page.component';
+
+describe('FacultyExamSchedulerPageComponent', () => {
+  let fixture: ComponentFixture<FacultyExamSchedulerPageComponent>;
+  let component: FacultyExamSchedulerPageComponent;
+  let api: { scheduleExams: ReturnType<typeof vi.fn> };
+
+  beforeEach(async () => {
+    api = { scheduleExams: vi.fn(() => of(scheduleResponse())) };
+
+    await TestBed.configureTestingModule({
+      imports: [FacultyExamSchedulerPageComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        { provide: FacultyExamScheduleApiService, useValue: api },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(FacultyExamSchedulerPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should submit a valid faculty request built from the current form', () => {
+    component.generateSchedule();
+
+    expect(api.scheduleExams).toHaveBeenCalledOnce();
+    const request = api.scheduleExams.mock.calls[0][0] as FacultyExamScheduleRequest;
+    expect(request.slots).toHaveLength(6);
+    expect(request.slots[0]).toEqual({
+      id: 'SLOT_20260601_D1',
+      start: '2026-06-01T09:00:00',
+      end: '2026-06-01T12:00:00',
+    });
+    expect(request.exams[0].studentGroups).toEqual(['SI1', 'RTI1']);
+    expect(request.rooms[0].availability).toEqual([
+      { start: '2026-06-01T00:00:00', end: '2026-06-03T00:00:00' },
+    ]);
+  });
+
+  it('should not include algorithm or solver configuration in the faculty request', () => {
+    component.generateSchedule();
+
+    const request = api.scheduleExams.mock.calls[0][0] as FacultyExamScheduleRequest;
+    expect(Object.keys(request).sort()).toEqual(['exams', 'invigilators', 'rooms', 'slots']);
+    expect(JSON.stringify(request)).not.toMatch(
+      /selectionMode|algorithm|goal|cpSatTimeLimitSeconds|backtrackingTimeLimitMs|solverWorkers/,
+    );
+  });
+
+  it('should prevent duplicate submissions while a request is running', async () => {
+    const response = new Subject<FacultyExamScheduleResponse>();
+    api.scheduleExams.mockReturnValue(response.asObservable());
+
+    component.generateSchedule();
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    expect(api.scheduleExams).toHaveBeenCalledOnce();
+    expect(component.isLoading()).toBe(true);
+    expect(generateButton().disabled).toBe(true);
+
+    response.next(scheduleResponse());
+    response.complete();
+    await fixture.whenStable();
+    expect(component.isLoading()).toBe(false);
+  });
+
+  it('should render the scheduled count and actual exam interval from the response', async () => {
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.textContent as string;
+    const table = fixture.nativeElement.querySelector('[data-testid="scheduled-exams-table"]');
+    expect(text).toContain('1 / 2 ispita raspoređeno');
+    expect(table.textContent).toContain('09:00–10:30');
+    expect(table.textContent).not.toContain('09:00–12:00');
+  });
+
+  it('should show unscheduled exams in a separate section', async () => {
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    const table = fixture.nativeElement.querySelector('[data-testid="unscheduled-exams-table"]');
+    expect(table).not.toBeNull();
+    expect(table.textContent).toContain('OOP2');
+    expect(table.textContent).toContain('Nije pronađena dozvoljena kombinacija.');
+  });
+
+  it('should show a user-friendly backend error', async () => {
+    api.scheduleExams.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 400 })));
+
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Podaci nisu ispravni.',
+    );
+    expect(component.isLoading()).toBe(false);
+  });
+
+  it('should reject invalid period and daily-slot values before submission', () => {
+    component.form.controls.startDate.setValue('2026-06-03');
+    component.form.controls.endDate.setValue('2026-06-01');
+    component.dailySlots.at(0).controls.endTime.setValue('08:00');
+
+    component.generateSchedule();
+
+    expect(component.form.invalid).toBe(true);
+    expect(api.scheduleExams).not.toHaveBeenCalled();
+  });
+
+  it('should reject required text fields that contain only whitespace', () => {
+    component.form.controls.periodName.setValue('   ');
+
+    component.generateSchedule();
+
+    expect(component.form.controls.periodName.invalid).toBe(true);
+    expect(api.scheduleExams).not.toHaveBeenCalled();
+  });
+
+  it('should not expose allocation algorithm controls in the faculty template', () => {
+    const text = (fixture.nativeElement.textContent as string).toUpperCase();
+
+    expect(text).not.toMatch(/CP-SAT|OR-TOOLS|GREEDY|BACKTRACKING|EXPLICIT|COMPARE|\bAUTO\b/);
+    expect(fixture.debugElement.query(By.css('[data-testid="algorithm-select"]'))).toBeNull();
+  });
+
+  function generateButton(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('[data-testid="generate-schedule"]');
+  }
+});
+
+function scheduleResponse(): FacultyExamScheduleResponse {
+  return {
+    assignments: [
+      {
+        examId: 'EXAM_1',
+        examCode: 'MAT101',
+        examName: 'Matematika 1',
+        studentCount: 80,
+        slotId: 'SLOT_20260601_D1',
+        slotStart: '2026-06-01T09:00:00',
+        slotEnd: '2026-06-01T12:00:00',
+        actualEnd: '2026-06-01T10:30:00',
+        room: { id: 'ROOM_1', name: 'Amfiteatar A', capacity: 120 },
+        invigilators: [{ id: 'INV_1', name: 'Ana Petrović' }],
+      },
+    ],
+    unscheduledExams: [
+      {
+        examId: 'EXAM_2',
+        examCode: 'OOP2',
+        examName: 'Objektno programiranje 2',
+        studentCount: 45,
+        reason: 'Nije pronađena dozvoljena kombinacija.',
+      },
+    ],
+    statistics: {
+      totalExams: 2,
+      scheduledExams: 1,
+      unscheduledExams: 1,
+      solverStatus: 'OPTIMAL',
+      executionTimeMs: 24,
+      stoppedByLimit: false,
+    },
+  };
+}

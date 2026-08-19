@@ -1,0 +1,101 @@
+<section class="schedule-result" aria-labelledby="schedule-result-title">
+  <header class="result-header">
+    <div>
+      <p class="section-kicker">{{ periodName }}</p>
+      <h2 id="schedule-result-title">Raspored generisan</h2>
+      <p>
+        {{ result.statistics.scheduledExams }} / {{ result.statistics.totalExams }} ispita raspoređeno
+      </p>
+    </div>
+    <div class="result-count" aria-label="Broj raspoređenih ispita">
+      <strong>{{ result.statistics.scheduledExams }}</strong>
+      <span>raspoređeno</span>
+    </div>
+  </header>
+
+  <div class="result-section">
+    <div class="section-title-row">
+      <div>
+        <p class="section-kicker">Potvrđeni termini</p>
+        <h3>Raspoređeni ispiti</h3>
+      </div>
+      <span>{{ result.assignments.length }}</span>
+    </div>
+
+    @if (result.assignments.length > 0) {
+      <div class="table-wrap">
+        <table data-testid="scheduled-exams-table">
+          <thead>
+            <tr>
+              <th>Predmet</th>
+              <th>Datum</th>
+              <th>Vreme</th>
+              <th>Sala</th>
+              <th>Studenata</th>
+              <th>Dežurni</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (assignment of result.assignments; track assignment.examId) {
+              <tr>
+                <td>
+                  <strong>{{ assignment.examCode }}</strong>
+                  <span>{{ assignment.examName }}</span>
+                </td>
+                <td>{{ formatDate(assignment.slotStart) }}</td>
+                <td>
+                  {{ formatTime(assignment.slotStart) }}–{{ formatTime(assignment.actualEnd) }}
+                </td>
+                <td>
+                  <strong>{{ assignment.room.name }}</strong>
+                  <span>Kapacitet {{ assignment.room.capacity }}</span>
+                </td>
+                <td>{{ assignment.studentCount }}</td>
+                <td>{{ invigilatorNames(assignment.invigilators) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty-state">Nijedan ispit nije mogao da bude raspoređen sa trenutnim podacima.</p>
+    }
+  </div>
+
+  <div class="result-section unscheduled-section">
+    <div class="section-title-row">
+      <div>
+        <p class="section-kicker">Potrebna provera</p>
+        <h3>Neraspoređeni ispiti</h3>
+      </div>
+      <span>{{ result.unscheduledExams.length }}</span>
+    </div>
+
+    @if (result.unscheduledExams.length > 0) {
+      <div class="table-wrap">
+        <table data-testid="unscheduled-exams-table">
+          <thead>
+            <tr>
+              <th>Šifra</th>
+              <th>Predmet</th>
+              <th>Studenata</th>
+              <th>Razlog</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exam of result.unscheduledExams; track exam.examId) {
+              <tr>
+                <td><strong>{{ exam.examCode }}</strong></td>
+                <td>{{ exam.examName }}</td>
+                <td>{{ exam.studentCount }}</td>
+                <td>{{ exam.reason }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="success-state">Svi uneti ispiti su uspešno raspoređeni.</p>
+    }
+  </div>
+</section>

@@ -1,0 +1,163 @@
+:host {
+  display: block;
+}
+
+.schedule-result {
+  display: grid;
+  gap: 24px;
+  border: 1px solid #cfd6de;
+  border-top: 4px solid #246895;
+  background: #ffffff;
+  padding: 24px;
+}
+
+.result-header,
+.section-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.result-header h2,
+.section-title-row h3 {
+  margin: 0;
+  color: #17212b;
+}
+
+.result-header h2 {
+  font-size: 1.65rem;
+}
+
+.result-header p:not(.section-kicker) {
+  margin: 7px 0 0;
+  color: #52606d;
+}
+
+.section-kicker {
+  margin: 0 0 5px;
+  color: #557083;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.result-count {
+  min-width: 126px;
+  border-left: 3px solid #246895;
+  background: #eef5f9;
+  padding: 10px 14px;
+}
+
+.result-count strong,
+.result-count span {
+  display: block;
+}
+
+.result-count strong {
+  color: #174f73;
+  font-size: 1.45rem;
+}
+
+.result-count span {
+  margin-top: 2px;
+  color: #526a7a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.result-section {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #d8dee5;
+  padding-top: 20px;
+}
+
+.section-title-row h3 {
+  font-size: 1.05rem;
+}
+
+.section-title-row > span {
+  min-width: 34px;
+  border: 1px solid #b9c7d2;
+  background: #f6f8fa;
+  color: #304555;
+  font-weight: 700;
+  padding: 5px 8px;
+  text-align: center;
+}
+
+.unscheduled-section .section-title-row > span {
+  border-color: #d4b1ad;
+  background: #fff5f3;
+  color: #8c3e36;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border-bottom: 1px solid #dce1e6;
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  border-top: 1px solid #cfd6de;
+  background: #f1f4f6;
+  color: #475462;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+td {
+  color: #27323d;
+}
+
+td strong,
+td span {
+  display: block;
+}
+
+td span {
+  margin-top: 3px;
+  color: #66727f;
+  font-size: 0.82rem;
+}
+
+.empty-state,
+.success-state {
+  margin: 0;
+  border-left: 3px solid #9aa9b5;
+  background: #f6f8fa;
+  color: #475462;
+  padding: 12px 14px;
+}
+
+.success-state {
+  border-left-color: #3b8158;
+  background: #f0f8f3;
+  color: #27613d;
+}
+
+@media (max-width: 640px) {
+  .schedule-result {
+    padding: 18px 14px;
+  }
+
+  .result-header {
+    flex-direction: column;
+  }
+}
