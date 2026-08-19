@@ -11,6 +11,7 @@
 
     <modules>
         <module>allocation-core</module>
+        <module>allocation-faculty</module>
         <module>allocation-api</module>
     </modules>
 

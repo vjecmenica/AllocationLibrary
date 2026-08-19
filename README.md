@@ -5,6 +5,7 @@ AllocationLibrary is a Java 17 Maven project for resource allocation experiments
 ## Modules
 
 - `allocation-core`: core allocation models, constraints, algorithms, benchmark helpers, and the public library API.
+- `allocation-faculty`: domain models and a dedicated CP-SAT scheduler for faculty exams.
 - `allocation-api`: Spring Boot REST API that exposes stateless allocation execution and comparison endpoints.
 - `allocation-web`: Angular frontend for running the sample allocation scenario through the REST API.
 
@@ -28,6 +29,14 @@ The GitHub Actions CI workflow automatically verifies:
 ## REST API
 
 See [docs/rest-api.md](docs/rest-api.md) for endpoint documentation and JSON examples.
+
+## Faculty Exam Scheduling
+
+The faculty use case selects a discrete exam slot, one room, and the required invigilators for each exam while
+respecting availability, capacity, resource conflicts, and shared student groups. It is implemented separately from
+the fixed-time generic allocation algorithms and is exposed through `POST /api/faculty/exam-schedule`. See
+[docs/faculty-exam-scheduler.md](docs/faculty-exam-scheduler.md) for the domain model, constraints, API contract, and
+V1 limitations.
 
 ## Benchmarking
 
