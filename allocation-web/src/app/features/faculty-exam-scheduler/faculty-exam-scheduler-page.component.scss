@@ -53,7 +53,7 @@
 
 .configuration-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -66,6 +66,11 @@
 .configuration-header span { color: var(--faculty-primary); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .configuration-header h2 { margin: 2px 0 0; font-size: 1.15rem; }
 .configuration-header small { color: var(--faculty-muted); }
+.configuration-data { border-bottom: 1px solid var(--faculty-border); padding: 7px 12px; }
+.configuration-data-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.configuration-data-actions > span { margin-right: auto; color: var(--faculty-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; }
+.configuration-data-status { margin: 6px 0 0; color: var(--faculty-success); font-size: 0.7rem; }
+.configuration-data-status.error { color: var(--faculty-danger); }
 
 .configuration-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--faculty-border); background: #f6f4f2; }
 .configuration-tabs button { position: relative; display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 0; border: 0; border-right: 1px solid var(--faculty-border); border-bottom: 3px solid transparent; background: transparent; color: var(--faculty-muted); cursor: pointer; font: inherit; font-size: 0.72rem; font-weight: 700; padding: 10px 4px 7px; }
@@ -94,6 +99,7 @@ input.ng-invalid.ng-touched { border-color: var(--faculty-danger); }
 .list-heading h4 { font-size: 0.88rem; }
 .add-action, .wide-add-action, .remove-action, .remove-text-action { border: 1px solid #bcb4b0; border-radius: 3px; background: #fff; color: var(--faculty-text); cursor: pointer; font: inherit; font-size: 0.7rem; font-weight: 700; padding: 7px 9px; }
 .add-action:hover, .wide-add-action:hover { border-color: var(--faculty-primary); color: var(--faculty-primary); }
+.add-action:disabled { cursor: not-allowed; opacity: 0.5; }
 .wide-add-action { width: 100%; border-style: dashed; padding: 10px; }
 .remove-action { align-self: end; color: var(--faculty-danger); font-size: 1rem; }
 .remove-text-action { border-color: #d7b8bb; color: var(--faculty-danger); }

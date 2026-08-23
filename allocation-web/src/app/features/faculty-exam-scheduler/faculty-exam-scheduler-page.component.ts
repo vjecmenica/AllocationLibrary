@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import {
   AbstractControl,
@@ -12,9 +12,10 @@ import {
   Validators,
 } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, firstValueFrom } from 'rxjs';
 
 import { FacultyExamScheduleApiService } from '../../core/api/faculty-exam-schedule-api.service';
+import { DOWNLOAD_TEXT_FILE } from '../../core/files/download-text-file';
 import {
   FacultyExamDto,
   FacultyExamSlotDto,
@@ -26,6 +27,11 @@ import {
 } from '../../core/models/faculty-exam-schedule.models';
 import { FacultyExamScheduleResultComponent } from './faculty-exam-schedule-result.component';
 import {
+  FacultyScheduleConfiguration,
+  parseFacultyScheduleJson,
+  serializeFacultySchedule,
+} from './faculty-schedule-json';
+import {
   fullPeriodAvailability,
   generateExamSlots,
   isValidDailySlot,
@@ -35,6 +41,10 @@ import {
 } from './faculty-schedule.utils';
 
 type ConfigurationSection = 'PERIOD' | 'EXAMS' | 'ROOMS' | 'INVIGILATORS';
+type ConfigurationStatus = { type: 'success' | 'error'; message: string };
+
+const MAX_FACULTY_FILE_SIZE_BYTES = 1024 * 1024;
+const FACULTY_DEMO_URL = '/demo/faculty-exam-schedule-demo.json';
 
 const CONFIGURATION_SECTIONS: readonly ConfigurationSection[] = [
   'PERIOD',
@@ -129,16 +139,16 @@ const nonBlankValidator: ValidatorFn = (control: AbstractControl): ValidationErr
 export class FacultyExamSchedulerPageComponent {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly api = inject(FacultyExamScheduleApiService);
+  private readonly http = inject(HttpClient);
+  private readonly downloadTextFile = inject(DOWNLOAD_TEXT_FILE);
 
-  private nextDailySlotId = 4;
-  private nextExamId = 4;
-  private nextRoomId = 3;
-  private nextInvigilatorId = 4;
   private formRevision = 0;
 
   readonly isLoading = signal(false);
+  readonly isConfigurationLoading = signal(false);
   readonly submitted = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly configurationStatus = signal<ConfigurationStatus | null>(null);
   readonly result = signal<FacultyExamScheduleResponse | null>(null);
   readonly resultPeriodName = signal('');
   readonly activeConfigurationSection = signal<ConfigurationSection>('PERIOD');
@@ -147,6 +157,9 @@ export class FacultyExamSchedulerPageComponent {
   readonly resultStale = signal(false);
   readonly displayedCalendarSlots = computed(() =>
     this.result() ? this.resultCalendarSlots() : this.currentCalendarSlots(),
+  );
+  readonly fileActionsDisabled = computed(() =>
+    this.isLoading() || this.isConfigurationLoading(),
   );
 
   readonly form = this.formBuilder.group(
@@ -182,6 +195,7 @@ export class FacultyExamSchedulerPageComponent {
     this.form.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => {
       this.formRevision++;
       this.errorMessage.set(null);
+      this.configurationStatus.set(null);
       this.refreshCalendarSlots();
       if (this.result()) {
         this.resultStale.set(true);
@@ -241,7 +255,7 @@ export class FacultyExamSchedulerPageComponent {
   addDailySlot(): void {
     const { startTime, endTime } = this.nextDailySlotDefaults();
     this.dailySlots.push(
-      this.createDailySlotForm(`D${this.nextDailySlotId++}`, startTime, endTime),
+      this.createDailySlotForm(this.nextAvailableId('D', '', this.dailySlots), startTime, endTime),
     );
   }
 
@@ -251,7 +265,9 @@ export class FacultyExamSchedulerPageComponent {
   }
 
   addExam(): void {
-    this.exams.push(this.createExamForm(`EXAM_${this.nextExamId++}`, '', '', 1, 60, 0, ''));
+    this.exams.push(
+      this.createExamForm(this.nextAvailableId('EXAM', '_', this.exams), '', '', 1, 60, 0, ''),
+    );
   }
 
   removeExam(index: number): void {
@@ -260,7 +276,9 @@ export class FacultyExamSchedulerPageComponent {
   }
 
   addRoom(): void {
-    this.rooms.push(this.createRoomForm(`ROOM_${this.nextRoomId++}`, '', 1, true));
+    this.rooms.push(
+      this.createRoomForm(this.nextAvailableId('ROOM', '_', this.rooms), '', 1, true),
+    );
   }
 
   removeRoom(index: number): void {
@@ -270,7 +288,11 @@ export class FacultyExamSchedulerPageComponent {
 
   addInvigilator(): void {
     this.invigilators.push(
-      this.createInvigilatorForm(`INV_${this.nextInvigilatorId++}`, '', true),
+      this.createInvigilatorForm(
+        this.nextAvailableId('INV', '_', this.invigilators),
+        '',
+        true,
+      ),
     );
   }
 
@@ -297,12 +319,89 @@ export class FacultyExamSchedulerPageComponent {
     resource.updateValueAndValidity();
   }
 
+  async importFacultyScheduleFile(event: Event): Promise<void> {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.item(0);
+    this.configurationStatus.set(null);
+
+    if (!file) {
+      return;
+    }
+
+    this.isConfigurationLoading.set(true);
+    try {
+      if (file.size > MAX_FACULTY_FILE_SIZE_BYTES) {
+        this.configurationStatus.set({
+          type: 'error',
+          message: 'Izabrani fajl je prevelik. Maksimalna veličina je 1 MB.',
+        });
+        return;
+      }
+      this.importScheduleText(await file.text(), 'Podaci su uspešno uvezeni.');
+    } catch {
+      this.configurationStatus.set({
+        type: 'error',
+        message: 'Scenario nije moguće učitati.',
+      });
+    } finally {
+      this.isConfigurationLoading.set(false);
+      input.value = '';
+    }
+  }
+
+  exportFacultySchedule(): void {
+    this.configurationStatus.set(null);
+    this.submitted.set(true);
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.configurationStatus.set({
+        type: 'error',
+        message: 'Najpre ispravite podatke u konfiguraciji.',
+      });
+      return;
+    }
+
+    this.downloadTextFile(
+      serializeFacultySchedule(this.currentScheduleConfiguration()),
+      'faculty-exam-schedule.json',
+      'application/json;charset=utf-8',
+    );
+    this.configurationStatus.set({ type: 'success', message: 'Podaci su izvezeni.' });
+  }
+
+  async loadDemoSchedule(): Promise<void> {
+    if (this.fileActionsDisabled()) {
+      return;
+    }
+
+    this.configurationStatus.set(null);
+    this.isConfigurationLoading.set(true);
+    try {
+      const json = await firstValueFrom(
+        this.http.get(FACULTY_DEMO_URL, { responseType: 'text' }),
+      );
+      if (!this.importScheduleText(json, 'Demo scenario je učitan.')) {
+        this.configurationStatus.set({
+          type: 'error',
+          message: 'Scenario nije moguće učitati.',
+        });
+      }
+    } catch {
+      this.configurationStatus.set({
+        type: 'error',
+        message: 'Scenario nije moguće učitati.',
+      });
+    } finally {
+      this.isConfigurationLoading.set(false);
+    }
+  }
+
   showError(control: AbstractControl): boolean {
     return control.invalid && (control.touched || this.submitted());
   }
 
   generateSchedule(): void {
-    if (this.isLoading()) {
+    if (this.isLoading() || this.isConfigurationLoading()) {
       return;
     }
 
@@ -331,6 +430,164 @@ export class FacultyExamSchedulerPageComponent {
           this.errorMessage.set(this.userFriendlyError(error));
         },
       });
+  }
+
+  private importScheduleText(json: string, successMessage: string): boolean {
+    const parsed = parseFacultyScheduleJson(json);
+    if (!parsed.success) {
+      this.configurationStatus.set({ type: 'error', message: parsed.message });
+      return false;
+    }
+    if (!this.isValidScheduleCandidate(parsed.schedule)) {
+      this.configurationStatus.set({
+        type: 'error',
+        message: 'Uvezeni scenario sadrži neispravne podatke.',
+      });
+      return false;
+    }
+
+    this.replaceScheduleConfiguration(parsed.schedule);
+    this.configurationStatus.set({ type: 'success', message: successMessage });
+    return true;
+  }
+
+  private isValidScheduleCandidate(schedule: FacultyScheduleConfiguration): boolean {
+    const candidate = this.formBuilder.group(
+      {
+        periodName: this.formBuilder.control(schedule.periodName, nonBlankValidator),
+        startDate: this.formBuilder.control(schedule.startDate, Validators.required),
+        endDate: this.formBuilder.control(schedule.endDate, Validators.required),
+        dailySlots: this.formBuilder.array<DailySlotForm>(
+          schedule.dailySlots.map((slot, index) =>
+            this.createDailySlotForm(`D${index + 1}`, slot.startTime, slot.endTime),
+          ),
+          [Validators.minLength(1), uniqueDailySlotStartValidator],
+        ),
+        exams: this.formBuilder.array<ExamForm>(
+          schedule.exams.map((exam) => this.createExamForm(
+            exam.id,
+            exam.code,
+            exam.name,
+            exam.studentCount,
+            exam.durationMinutes,
+            exam.requiredInvigilators,
+            exam.studentGroups.join(', '),
+          )),
+          Validators.minLength(1),
+        ),
+        rooms: this.formBuilder.array<RoomForm>(
+          schedule.rooms.map((room) => this.createRoomForm(
+            room.id,
+            room.name,
+            room.capacity,
+            room.availableEntirePeriod,
+            room.availability,
+          )),
+          Validators.minLength(1),
+        ),
+        invigilators: this.formBuilder.array<InvigilatorForm>(
+          schedule.invigilators.map((invigilator) => this.createInvigilatorForm(
+            invigilator.id,
+            invigilator.name,
+            invigilator.availableEntirePeriod,
+            invigilator.availability,
+          )),
+        ),
+      },
+      { validators: dateRangeValidator },
+    );
+    return candidate.valid;
+  }
+
+  private replaceScheduleConfiguration(schedule: FacultyScheduleConfiguration): void {
+    this.form.controls.periodName.setValue(schedule.periodName, { emitEvent: false });
+    this.form.controls.startDate.setValue(schedule.startDate, { emitEvent: false });
+    this.form.controls.endDate.setValue(schedule.endDate, { emitEvent: false });
+
+    this.dailySlots.clear({ emitEvent: false });
+    schedule.dailySlots.forEach((slot, index) => this.dailySlots.push(
+      this.createDailySlotForm(`D${index + 1}`, slot.startTime, slot.endTime),
+      { emitEvent: false },
+    ));
+
+    this.exams.clear({ emitEvent: false });
+    schedule.exams.forEach((exam) => this.exams.push(this.createExamForm(
+      exam.id,
+      exam.code,
+      exam.name,
+      exam.studentCount,
+      exam.durationMinutes,
+      exam.requiredInvigilators,
+      exam.studentGroups.join(', '),
+    ), { emitEvent: false }));
+
+    this.rooms.clear({ emitEvent: false });
+    schedule.rooms.forEach((room) => this.rooms.push(this.createRoomForm(
+      room.id,
+      room.name,
+      room.capacity,
+      room.availableEntirePeriod,
+      room.availability,
+    ), { emitEvent: false }));
+
+    this.invigilators.clear({ emitEvent: false });
+    schedule.invigilators.forEach((invigilator) => this.invigilators.push(
+      this.createInvigilatorForm(
+        invigilator.id,
+        invigilator.name,
+        invigilator.availableEntirePeriod,
+        invigilator.availability,
+      ),
+      { emitEvent: false },
+    ));
+
+    this.form.updateValueAndValidity({ emitEvent: false });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.formRevision++;
+    this.submitted.set(false);
+    this.errorMessage.set(null);
+    this.result.set(null);
+    this.resultPeriodName.set('');
+    this.resultCalendarSlots.set([]);
+    this.resultStale.set(false);
+    this.activeConfigurationSection.set('PERIOD');
+    this.refreshCalendarSlots();
+  }
+
+  private currentScheduleConfiguration(): FacultyScheduleConfiguration {
+    const value = this.form.getRawValue();
+    return {
+      periodName: value.periodName.trim(),
+      startDate: value.startDate,
+      endDate: value.endDate,
+      dailySlots: value.dailySlots.map((slot) => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+      })),
+      exams: value.exams.map((exam) => ({
+        id: exam.id,
+        code: exam.code.trim(),
+        name: exam.name.trim(),
+        studentCount: exam.studentCount,
+        durationMinutes: exam.durationMinutes,
+        requiredInvigilators: exam.requiredInvigilators,
+        studentGroups: parseStudentGroups(exam.studentGroups),
+      })),
+      rooms: value.rooms.map((room) => ({
+        id: room.id,
+        name: room.name.trim(),
+        capacity: room.capacity,
+        availableEntirePeriod: room.availableEntirePeriod,
+        availability: room.availability.map((window) => ({ ...window })),
+      })),
+      invigilators: value.invigilators.map((invigilator) => ({
+        id: invigilator.id,
+        name: invigilator.name.trim(),
+        availableEntirePeriod: invigilator.availableEntirePeriod,
+        availability: invigilator.availability.map((window) => ({ ...window })),
+      })),
+    };
   }
 
   private createRequest(): FacultyExamScheduleRequest {
@@ -415,6 +672,19 @@ export class FacultyExamSchedulerPageComponent {
     return { startTime: '', endTime: '' };
   }
 
+  private nextAvailableId(
+    prefix: string,
+    separator: string,
+    forms: { controls: ReadonlyArray<{ controls: { id: FormControl<string> } }> },
+  ): string {
+    const usedIds = new Set(forms.controls.map((form) => form.controls.id.value));
+    let index = 1;
+    while (usedIds.has(`${prefix}${separator}${index}`)) {
+      index++;
+    }
+    return `${prefix}${separator}${index}`;
+  }
+
   private createExamForm(
     id: string,
     code: string,
@@ -440,8 +710,11 @@ export class FacultyExamSchedulerPageComponent {
     name: string,
     capacity: number,
     availableEntirePeriod: boolean,
+    windows: readonly FacultyTimeWindowDto[] = [],
   ): RoomForm {
-    const availability = this.formBuilder.array<AvailabilityForm>([]);
+    const availability = this.formBuilder.array<AvailabilityForm>(
+      windows.map((window) => this.createAvailabilityForm(window.start, window.end)),
+    );
     if (availableEntirePeriod) {
       availability.disable({ emitEvent: false });
     }
@@ -459,8 +732,11 @@ export class FacultyExamSchedulerPageComponent {
     id: string,
     name: string,
     availableEntirePeriod: boolean,
+    windows: readonly FacultyTimeWindowDto[] = [],
   ): InvigilatorForm {
-    const availability = this.formBuilder.array<AvailabilityForm>([]);
+    const availability = this.formBuilder.array<AvailabilityForm>(
+      windows.map((window) => this.createAvailabilityForm(window.start, window.end)),
+    );
     if (availableEntirePeriod) {
       availability.disable({ emitEvent: false });
     }

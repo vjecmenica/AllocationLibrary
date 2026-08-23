@@ -26,6 +26,19 @@
         <small>Podaci ispitnog roka</small>
       </header>
 
+      <section class="configuration-data" aria-label="Uvoz i izvoz konfiguracije">
+        <div class="configuration-data-actions">
+          <span>Podaci</span>
+          <button type="button" class="add-action" data-testid="import-faculty-schedule" [disabled]="fileActionsDisabled()" (click)="facultyFileInput.click()">UVEZI</button>
+          <button type="button" class="add-action" data-testid="export-faculty-schedule" [disabled]="fileActionsDisabled()" (click)="exportFacultySchedule()">IZVEZI</button>
+          <button type="button" class="add-action" data-testid="load-faculty-demo" [disabled]="fileActionsDisabled()" (click)="loadDemoSchedule()">UČITAJ DEMO</button>
+          <input #facultyFileInput type="file" accept=".json,application/json" aria-label="Izaberite Faculty scenario JSON fajl" hidden [disabled]="fileActionsDisabled()" (change)="importFacultyScheduleFile($event)" />
+        </div>
+        @if (configurationStatus(); as status) {
+          <p class="configuration-data-status" [class.error]="status.type === 'error'" aria-live="polite" [attr.role]="status.type === 'error' ? 'alert' : null">{{ status.message }}</p>
+        }
+      </section>
+
       <div class="configuration-tabs" role="tablist" aria-label="Sekcije konfiguracije">
         <button id="faculty-tab-period" type="button" role="tab" aria-label="Rok" aria-controls="faculty-panel-period" [attr.aria-selected]="activeConfigurationSection() === 'PERIOD'" [attr.tabindex]="activeConfigurationSection() === 'PERIOD' ? 0 : -1" [class.active]="activeConfigurationSection() === 'PERIOD'" (click)="selectConfigurationSection('PERIOD')" (keydown)="onConfigurationTabKeydown($event, 'PERIOD')"><span>Rok</span></button>
         <button id="faculty-tab-exams" type="button" role="tab" aria-controls="faculty-panel-exams" [attr.aria-label]="'Ispiti: ' + exams.length" [attr.aria-selected]="activeConfigurationSection() === 'EXAMS'" [attr.tabindex]="activeConfigurationSection() === 'EXAMS' ? 0 : -1" [class.active]="activeConfigurationSection() === 'EXAMS'" (click)="selectConfigurationSection('EXAMS')" (keydown)="onConfigurationTabKeydown($event, 'EXAMS')"><span>Ispiti</span><strong>{{ exams.length }}</strong></button>
@@ -167,7 +180,7 @@
 
       <footer class="configuration-footer">
         <p>{{ exams.length }} ispita · {{ rooms.length }} sala · {{ invigilators.length }} dežurnih</p>
-        <button type="submit" class="primary-action" data-testid="generate-schedule" [disabled]="isLoading() || form.invalid">
+        <button type="submit" class="primary-action" data-testid="generate-schedule" [disabled]="isLoading() || isConfigurationLoading() || form.invalid">
           {{ isLoading() ? 'GENERISANJE...' : 'GENERIŠI RASPORED' }}
         </button>
       </footer>

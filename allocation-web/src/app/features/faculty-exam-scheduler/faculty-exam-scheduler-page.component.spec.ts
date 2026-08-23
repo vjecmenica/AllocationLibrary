@@ -1,35 +1,54 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 
+import demoFile from '../../../../public/demo/faculty-exam-schedule-demo.json';
 import { FacultyExamScheduleApiService } from '../../core/api/faculty-exam-schedule-api.service';
+import { DOWNLOAD_TEXT_FILE, TextFileDownloader } from '../../core/files/download-text-file';
 import {
   FacultyExamScheduleRequest,
   FacultyExamScheduleResponse,
 } from '../../core/models/faculty-exam-schedule.models';
+import {
+  FacultyScheduleConfiguration,
+  parseFacultyScheduleJson,
+  serializeFacultySchedule,
+} from './faculty-schedule-json';
 import { FacultyExamSchedulerPageComponent } from './faculty-exam-scheduler-page.component';
 
 describe('FacultyExamSchedulerPageComponent', () => {
   let fixture: ComponentFixture<FacultyExamSchedulerPageComponent>;
   let component: FacultyExamSchedulerPageComponent;
   let api: { scheduleExams: ReturnType<typeof vi.fn> };
+  let httpTesting: HttpTestingController;
+  let downloadTextFile: ReturnType<typeof vi.fn<TextFileDownloader>>;
 
   beforeEach(async () => {
     api = { scheduleExams: vi.fn(() => of(scheduleResponse())) };
+    downloadTextFile = vi.fn<TextFileDownloader>();
 
     await TestBed.configureTestingModule({
       imports: [FacultyExamSchedulerPageComponent],
       providers: [
         provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: FacultyExamScheduleApiService, useValue: api },
+        { provide: DOWNLOAD_TEXT_FILE, useValue: downloadTextFile },
       ],
     }).compileComponents();
 
+    httpTesting = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(FacultyExamSchedulerPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    httpTesting.verify();
   });
 
   it('should submit a valid faculty request built from the current form', () => {
@@ -299,6 +318,186 @@ describe('FacultyExamSchedulerPageComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="exam-card"]')).not.toBeNull();
   });
 
+  it('should expose compact import, export, and demo actions', () => {
+    expect(button('import-faculty-schedule').textContent?.trim()).toBe('UVEZI');
+    expect(button('export-faculty-schedule').textContent?.trim()).toBe('IZVEZI');
+    expect(button('load-faculty-demo').textContent?.trim()).toBe('UČITAJ DEMO');
+  });
+
+  it('should import a valid file and replace the complete form configuration', async () => {
+    const schedule = importedSchedule();
+
+    await importJson(serializeFacultySchedule(schedule));
+
+    expect(component.form.controls.periodName.value).toBe(schedule.periodName);
+    expect(component.form.controls.startDate.value).toBe(schedule.startDate);
+    expect(component.form.controls.endDate.value).toBe(schedule.endDate);
+    expect(component.dailySlots.getRawValue()).toEqual([
+      { id: 'D1', startTime: '10:00', endTime: '12:00' },
+      { id: 'D2', startTime: '14:00', endTime: '17:00' },
+    ]);
+    expect(component.exams).toHaveLength(1);
+    expect(component.exams.at(0).controls.id.value).toBe('EXAM_4');
+    expect(component.exams.at(0).controls.studentGroups.value).toBe('SI4, RTI4');
+    expect(component.rooms).toHaveLength(1);
+    expect(component.invigilators).toHaveLength(1);
+    expect(component.form.pristine).toBe(true);
+    expect(component.form.untouched).toBe(true);
+  });
+
+  it('should restore entire-period and custom availability values on import', async () => {
+    await importJson(serializeFacultySchedule(importedSchedule()));
+
+    const room = component.rooms.at(0);
+    const invigilator = component.invigilators.at(0);
+    expect(room.controls.availableEntirePeriod.value).toBe(false);
+    expect(room.controls.availability.getRawValue()).toEqual([
+      { start: '2026-07-01T08:00', end: '2026-07-02T18:00' },
+    ]);
+    expect(invigilator.controls.availableEntirePeriod.value).toBe(true);
+    expect(invigilator.controls.availability.disabled).toBe(true);
+  });
+
+  it('should preserve the current form and show an error for an invalid file', async () => {
+    const previousIds = component.exams.controls.map((exam) => exam.controls.id.value);
+
+    await importJson('{not-json');
+
+    expect(component.exams.controls.map((exam) => exam.controls.id.value)).toEqual(previousIds);
+    expect(component.configurationStatus()).toEqual({
+      type: 'error',
+      message: 'Izabrani fajl nije validan JSON.',
+    });
+    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
+      'Izabrani fajl nije validan JSON.',
+    );
+  });
+
+  it('should reject an oversized file without changing the form', async () => {
+    const file = scheduleFile(serializeFacultySchedule(importedSchedule()));
+    Object.defineProperty(file, 'size', { configurable: true, value: 1024 * 1024 + 1 });
+
+    await importFile(file);
+
+    expect(component.exams).toHaveLength(3);
+    expect(component.configurationStatus()?.message).toContain('Maksimalna veličina je 1 MB');
+  });
+
+  it('should clear an old result and refresh the empty calendar after bulk import', async () => {
+    component.generateSchedule();
+    await fixture.whenStable();
+    component.form.controls.periodName.setValue('Stale value');
+    expect(component.resultStale()).toBe(true);
+
+    await importJson(serializeFacultySchedule(importedSchedule()));
+
+    expect(component.result()).toBeNull();
+    expect(component.resultStale()).toBe(false);
+    expect(component.errorMessage()).toBeNull();
+    expect(component.activeConfigurationSection()).toBe('PERIOD');
+    expect(component.currentCalendarSlots()).toHaveLength(6);
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="exam-card"]')).toHaveLength(0);
+  });
+
+  it('should avoid generated ID collisions after import', async () => {
+    await importJson(serializeFacultySchedule(importedSchedule()));
+
+    component.addDailySlot();
+    component.addExam();
+    component.addRoom();
+    component.addInvigilator();
+
+    expect(uniqueIds(component.dailySlots.controls.map((slot) => slot.controls.id.value))).toBe(true);
+    expect(uniqueIds(component.exams.controls.map((exam) => exam.controls.id.value))).toBe(true);
+    expect(uniqueIds(component.rooms.controls.map((room) => room.controls.id.value))).toBe(true);
+    expect(uniqueIds(component.invigilators.controls.map((item) => item.controls.id.value))).toBe(true);
+  });
+
+  it('should export the current valid configuration through the shared download helper', () => {
+    component.form.controls.periodName.setValue('Aktuelni rok');
+    component.exams.at(0).controls.studentGroups.setValue('SI1, RTI1');
+    component.exportFacultySchedule();
+
+    expect(downloadTextFile).toHaveBeenCalledOnce();
+    const [json, fileName, mimeType] = downloadTextFile.mock.calls[0];
+    expect(fileName).toBe('faculty-exam-schedule.json');
+    expect(mimeType).toBe('application/json;charset=utf-8');
+    const parsed = parseFacultyScheduleJson(json);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.schedule.periodName).toBe('Aktuelni rok');
+      expect(parsed.schedule.exams[0].studentGroups).toEqual(['SI1', 'RTI1']);
+      expect(parsed.schedule.rooms[0].availableEntirePeriod).toBe(true);
+    }
+    expect(JSON.parse(json)).toMatchObject({ schemaVersion: 1 });
+  });
+
+  it('should preserve custom availability in an exported file', () => {
+    const room = component.rooms.at(0);
+    component.addAvailability(room);
+    room.controls.availability.at(0).setValue({
+      start: '2026-06-01T08:00',
+      end: '2026-06-01T18:00',
+    });
+
+    component.exportFacultySchedule();
+
+    const parsed = parseFacultyScheduleJson(downloadTextFile.mock.calls[0][0]);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.schedule.rooms[0].availableEntirePeriod).toBe(false);
+      expect(parsed.schedule.rooms[0].availability).toEqual([
+        { start: '2026-06-01T08:00', end: '2026-06-01T18:00' },
+      ]);
+    }
+  });
+
+  it('should not export an invalid form', () => {
+    component.form.controls.periodName.setValue('   ');
+
+    component.exportFacultySchedule();
+
+    expect(downloadTextFile).not.toHaveBeenCalled();
+    expect(component.configurationStatus()?.message).toBe(
+      'Najpre ispravite podatke u konfiguraciji.',
+    );
+  });
+
+  it('should load the canonical bundled demo through the import path', async () => {
+    const loading = component.loadDemoSchedule();
+    const request = httpTesting.expectOne('/demo/faculty-exam-schedule-demo.json');
+    expect(request.request.responseType).toBe('text');
+    request.flush(JSON.stringify(demoFile));
+    await loading;
+    await fixture.whenStable();
+
+    expect(component.exams).toHaveLength(24);
+    expect(component.rooms).toHaveLength(6);
+    expect(component.invigilators).toHaveLength(12);
+    expect(component.dailySlots).toHaveLength(3);
+    expect(component.currentCalendarSlots()).toHaveLength(21);
+    expect(component.configurationStatus()).toEqual({
+      type: 'success',
+      message: 'Demo scenario je učitan.',
+    });
+  });
+
+  it('should keep the current configuration when the bundled demo cannot be loaded', async () => {
+    const loading = component.loadDemoSchedule();
+    httpTesting.expectOne('/demo/faculty-exam-schedule-demo.json').flush('missing', {
+      status: 404,
+      statusText: 'Not Found',
+    });
+    await loading;
+    await fixture.whenStable();
+
+    expect(component.exams).toHaveLength(3);
+    expect(component.configurationStatus()).toEqual({
+      type: 'error',
+      message: 'Scenario nije moguće učitati.',
+    });
+  });
+
   function generateButton(): HTMLButtonElement {
     return fixture.nativeElement.querySelector('[data-testid="generate-schedule"]');
   }
@@ -308,7 +507,84 @@ describe('FacultyExamSchedulerPageComponent', () => {
       .find((element: HTMLButtonElement) => element.textContent?.trim() === label) as HTMLButtonElement;
     button.click();
   }
+
+  function button(testId: string): HTMLButtonElement {
+    return fixture.nativeElement.querySelector(`[data-testid="${testId}"]`);
+  }
+
+  function fileInput(): HTMLInputElement {
+    return fixture.nativeElement.querySelector('input[type="file"]');
+  }
+
+  function scheduleFile(json: string): File {
+    const file = new File([json], 'faculty.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', {
+      configurable: true,
+      value: vi.fn(() => Promise.resolve(json)),
+    });
+    return file;
+  }
+
+  async function importJson(json: string): Promise<void> {
+    await importFile(scheduleFile(json));
+  }
+
+  async function importFile(file: File): Promise<void> {
+    const input = fileInput();
+    const files = {
+      0: file,
+      length: 1,
+      item: (index: number) => (index === 0 ? file : null),
+    } as unknown as FileList;
+    Object.defineProperty(input, 'files', { configurable: true, value: files });
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      writable: true,
+      value: 'faculty.json',
+    });
+    await component.importFacultyScheduleFile({ currentTarget: input } as unknown as Event);
+    await fixture.whenStable();
+    expect(input.value).toBe('');
+  }
 });
+
+function uniqueIds(ids: readonly string[]): boolean {
+  return new Set(ids).size === ids.length;
+}
+
+function importedSchedule(): FacultyScheduleConfiguration {
+  return {
+    periodName: 'Uvezeni julski rok',
+    startDate: '2026-07-01',
+    endDate: '2026-07-03',
+    dailySlots: [
+      { startTime: '10:00', endTime: '12:00' },
+      { startTime: '14:00', endTime: '17:00' },
+    ],
+    exams: [{
+      id: 'EXAM_4',
+      code: 'IMP',
+      name: 'Uvezeni ispit',
+      studentCount: 40,
+      durationMinutes: 90,
+      requiredInvigilators: 1,
+      studentGroups: ['SI4', 'RTI4'],
+    }],
+    rooms: [{
+      id: 'ROOM_3',
+      name: 'Uvezena sala',
+      capacity: 80,
+      availableEntirePeriod: false,
+      availability: [{ start: '2026-07-01T08:00', end: '2026-07-02T18:00' }],
+    }],
+    invigilators: [{
+      id: 'INV_4',
+      name: 'Uvezeni dežurni',
+      availableEntirePeriod: true,
+      availability: [],
+    }],
+  };
+}
 
 function scheduleResponse(): FacultyExamScheduleResponse {
   return {
