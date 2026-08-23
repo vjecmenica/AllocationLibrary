@@ -45,7 +45,8 @@
 .view-tabs button.active { border-bottom-color: var(--faculty-accent); color: var(--faculty-primary-dark); }
 .view-tabs button:focus-visible, .exam-card:focus-visible, .exam-details-panel button:focus-visible { outline: 3px solid rgba(179, 135, 27, 0.3); outline-offset: 2px; }
 
-.workspace-body { position: relative; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: #f8f7f5; }
+.workspace-content { position: relative; min-height: 0; height: 100%; overflow: hidden; background: #f8f7f5; }
+.workspace-body { height: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .calendar-view, .table-view { display: grid; gap: 18px; padding: 18px; }
 .calendar-empty-message, .content-empty-state, .success-state { margin: 0; border: 1px solid var(--faculty-border); border-left: 4px solid var(--faculty-accent); background: var(--faculty-surface); color: var(--faculty-muted); padding: 11px 13px; }
 .calendar-empty-message strong, .calendar-empty-message span { display: block; }
@@ -84,7 +85,7 @@ table { width: 100%; border-collapse: collapse; }
 .table-view td span { margin-top: 2px; color: var(--faculty-muted); font-size: 0.76rem; }
 .success-state { border-left-color: var(--faculty-success); color: #315b3f; }
 
-.exam-details-panel { position: absolute; z-index: 3; top: 0; right: 0; width: min(380px, 100%); min-height: 100%; border-left: 1px solid var(--faculty-border); background: var(--faculty-surface); box-shadow: -8px 0 18px rgba(37, 27, 29, 0.1); padding: 20px; }
+.exam-details-panel { position: absolute; z-index: 3; top: 0; right: 0; bottom: 0; width: min(380px, 100%); overflow-y: auto; border-left: 1px solid var(--faculty-border); background: var(--faculty-surface); box-shadow: -8px 0 18px rgba(37, 27, 29, 0.1); padding: 20px; }
 .exam-details-panel header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2px solid var(--faculty-primary); padding-bottom: 13px; }
 .exam-details-panel header span { color: var(--faculty-muted); font-size: 0.72rem; text-transform: uppercase; }
 .exam-details-panel h3 { margin-top: 3px; color: var(--faculty-primary-dark); font-size: 1.35rem; }
@@ -97,7 +98,8 @@ table { width: 100%; border-collapse: collapse; }
 @media (max-width: 1100px) {
   :host { height: auto; overflow: visible; }
   .schedule-workspace { height: auto; }
-  .workspace-body { overflow: visible; }
+  .workspace-content { height: auto; overflow: visible; }
+  .workspace-body { height: auto; overflow: visible; }
 }
 
 @media (max-width: 720px) {

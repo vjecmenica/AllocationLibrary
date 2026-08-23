@@ -44,8 +44,9 @@
     <button id="schedule-tab-unscheduled" type="button" role="tab" aria-controls="schedule-panel-unscheduled" [attr.aria-selected]="activeView() === 'UNSCHEDULED'" [attr.tabindex]="activeView() === 'UNSCHEDULED' ? 0 : -1" [class.active]="activeView() === 'UNSCHEDULED'" (click)="selectView('UNSCHEDULED')" (keydown)="onViewTabKeydown($event, 'UNSCHEDULED')">NERASPOREĐENI {{ result?.unscheduledExams?.length ?? 0 }}</button>
   </div>
 
-  <div class="workspace-body">
-    @if (activeView() === 'CALENDAR') {
+  <div class="workspace-content">
+    <div class="workspace-body">
+      @if (activeView() === 'CALENDAR') {
       <div id="schedule-panel-calendar" class="calendar-view" role="tabpanel" aria-labelledby="schedule-tab-calendar" data-testid="faculty-calendar">
         @if (!result) {
           <div class="calendar-empty-message">
@@ -107,9 +108,9 @@
           <p class="content-empty-state">Definišite ispravan period i najmanje jedan dnevni termin.</p>
         }
       </div>
-    }
+      }
 
-    @if (activeView() === 'DETAILS') {
+      @if (activeView() === 'DETAILS') {
       <div id="schedule-panel-details" class="table-view" role="tabpanel" aria-labelledby="schedule-tab-details">
         @if (sortedAssignments().length > 0) {
           <div class="table-wrap">
@@ -133,9 +134,9 @@
           <p class="content-empty-state">Još nema raspoređenih ispita za detaljan pregled.</p>
         }
       </div>
-    }
+      }
 
-    @if (activeView() === 'UNSCHEDULED') {
+      @if (activeView() === 'UNSCHEDULED') {
       <div id="schedule-panel-unscheduled" class="table-view" role="tabpanel" aria-labelledby="schedule-tab-unscheduled">
         @if (result?.unscheduledExams?.length) {
           <div class="table-wrap">
@@ -154,7 +155,8 @@
           <p class="content-empty-state">Neraspoređeni ispiti će biti prikazani nakon generisanja.</p>
         }
       </div>
-    }
+      }
+    </div>
 
     @if (selectedAssignment(); as assignment) {
       <aside id="faculty-exam-details" class="exam-details-panel" aria-labelledby="faculty-exam-details-heading" data-testid="exam-details">

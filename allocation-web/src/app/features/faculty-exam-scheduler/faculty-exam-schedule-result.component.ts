@@ -104,7 +104,7 @@ export class FacultyExamScheduleResultComponent {
   openDetails(assignment: FacultyExamAssignmentDto, trigger: HTMLButtonElement): void {
     this.detailsTrigger = trigger;
     this.selectedAssignment.set(assignment);
-    afterNextRender(() => this.detailsCloseButton()?.nativeElement.focus(), {
+    afterNextRender(() => this.detailsCloseButton()?.nativeElement.focus({ preventScroll: true }), {
       injector: this.injector,
     });
   }
@@ -115,7 +115,7 @@ export class FacultyExamScheduleResultComponent {
     this.detailsTrigger = null;
 
     if (restoreFocus && trigger?.isConnected) {
-      afterNextRender(() => trigger.focus(), { injector: this.injector });
+      afterNextRender(() => trigger.focus({ preventScroll: true }), { injector: this.injector });
     }
   }
 

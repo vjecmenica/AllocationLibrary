@@ -102,6 +102,37 @@ describe('FacultyExamScheduleResultComponent', () => {
     expect(document.activeElement).toBe(card);
   });
 
+  it('should render exam details beside the scrollable workspace body', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+
+    const card = query('[data-testid="exam-card"]') as HTMLButtonElement;
+    card.click();
+    await fixture.whenStable();
+
+    const content = query('.workspace-content');
+    const body = query('.workspace-body');
+    const details = query('[data-testid="exam-details"]');
+    expect(content.contains(body)).toBe(true);
+    expect(details.parentElement).toBe(content);
+    expect(body.contains(details)).toBe(false);
+  });
+
+  it('should close exam details when switching result views', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+
+    (query('[data-testid="exam-card"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(query('[data-testid="exam-details"]')).not.toBeNull();
+
+    clickTab('DETALJAN PREGLED');
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedAssignment()).toBeNull();
+    expect(query('[data-testid="exam-details"]')).toBeNull();
+  });
+
   it('should connect result tabs to their labelled tabpanels', async () => {
     const expected = [
       ['schedule-tab-calendar', 'schedule-panel-calendar'],
