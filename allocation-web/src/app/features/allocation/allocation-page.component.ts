@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AllocationApiService } from '../../core/api/allocation-api.service';
@@ -28,6 +29,7 @@ type HealthState = 'checking' | 'online' | 'unavailable';
   imports: [
     CommonModule,
     FormsModule,
+    RouterLink,
     ExecutionResultComponent,
     ComparisonResultComponent,
     ScenarioEditorComponent,

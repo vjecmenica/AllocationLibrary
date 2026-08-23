@@ -60,9 +60,9 @@
 
     <p class="selection-reason">{{ execution.selectionReason }}</p>
 
-    <h3>Accepted allocations</h3>
+    <h3 class="result-section-heading accepted-heading">Accepted allocations</h3>
     @if (execution.allocations.length > 0) {
-      <div class="table-wrap">
+      <div class="table-wrap accepted-table">
         <table>
           <thead>
             <tr>
@@ -86,9 +86,9 @@
       <p class="empty-state">No accepted allocations were returned.</p>
     }
 
-    <h3>Rejected requests</h3>
+    <h3 class="result-section-heading rejected-heading">Rejected requests</h3>
     @if (execution.rejectedRequests.length > 0) {
-      <div class="table-wrap">
+      <div class="table-wrap rejected-table">
         <table>
           <thead>
             <tr>

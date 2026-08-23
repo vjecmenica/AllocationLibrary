@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AllocationApiService } from '../../core/api/allocation-api.service';
@@ -37,6 +38,7 @@ describe('AllocationPageComponent', () => {
       imports: [AllocationPageComponent],
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         {
           provide: AllocationApiService,
           useValue: allocationApiService,
@@ -47,6 +49,18 @@ describe('AllocationPageComponent', () => {
     fixture = TestBed.createComponent(AllocationPageComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
+
+  it('should render the ETF Analysis identity, context, health, and Faculty navigation', () => {
+    const logo = query('[data-testid="analysis-etf-logo"]') as HTMLImageElement;
+    const facultyLink = query('[data-testid="faculty-navigation"]') as HTMLAnchorElement;
+
+    expect(logo.getAttribute('src')).toBe('/etf-sign.png');
+    expect(logo.alt).toBe('Znak Elektrotehničkog fakulteta');
+    expect(fixture.nativeElement.textContent).toContain('AllocationLibrary');
+    expect(fixture.nativeElement.textContent).toContain('Experimental and analytical interface');
+    expect(fixture.nativeElement.textContent).toContain('API Online');
+    expect(facultyLink.getAttribute('href')).toBe('/');
   });
 
   it('should show algorithm select in explicit mode', () => {

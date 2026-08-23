@@ -55,6 +55,9 @@ describe('App', () => {
     const component = await harness.navigateByUrl('/analysis', AllocationPageComponent);
 
     expect(component).toBeInstanceOf(AllocationPageComponent);
-    expect(harness.routeNativeElement?.textContent).toContain('Resource Allocation Console');
+    expect(harness.routeNativeElement?.textContent).toContain('AllocationLibrary');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Experimental and analytical interface',
+    );
   });
 });

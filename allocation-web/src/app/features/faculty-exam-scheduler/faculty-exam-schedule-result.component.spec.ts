@@ -98,6 +98,21 @@ describe('FacultyExamScheduleResultComponent', () => {
     expect(text()).not.toContain('MODEL_INVALID');
   });
 
+  it('should describe a failed retry without claiming a previous non-solution was generated', async () => {
+    setResult(nonSolutionResponse('UNKNOWN'));
+    fixture.componentRef.setInput(
+      'errorMessage',
+      'Raspored trenutno nije moguće generisati. Proverite vezu sa servisom i pokušajte ponovo.',
+    );
+    await fixture.whenStable();
+
+    const alertText = query('[role="alert"]').textContent as string;
+    expect(alertText).toContain('Novi pokušaj nije uspeo.');
+    expect(alertText).toContain('Prikazan je rezultat prethodnog pokušaja.');
+    expect(alertText).not.toContain('Prikazan je prethodno generisani raspored.');
+    expect(alertText).not.toContain('UNKNOWN');
+  });
+
   it('should show parallel exams in the same cell using actualEnd', async () => {
     setResult(scheduleResponse());
     await fixture.whenStable();

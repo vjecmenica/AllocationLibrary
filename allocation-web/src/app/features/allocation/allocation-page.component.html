@@ -1,122 +1,167 @@
 <main class="page-shell">
-  <header class="app-header">
-    <div>
-      <p class="eyebrow">AllocationLibrary</p>
-      <h1>Resource Allocation Console</h1>
+  <header class="analysis-header" data-testid="analysis-header">
+    <div class="header-identity">
+      <div class="institutional-identity">
+        <img
+          src="/etf-sign.png"
+          alt="Znak Elektrotehničkog fakulteta"
+          data-testid="analysis-etf-logo"
+        />
+        <div>
+          <p>Univerzitet u Beogradu</p>
+          <strong>Elektrotehnički fakultet</strong>
+        </div>
+      </div>
+      <div class="analysis-title">
+        <p>Analysis workspace</p>
+        <h1>AllocationLibrary</h1>
+        <span>Experimental and analytical interface</span>
+      </div>
     </div>
-    <span class="health-pill" [ngClass]="healthClass()">{{ healthLabel() }}</span>
+    <div class="header-actions">
+      <a routerLink="/" class="faculty-link" data-testid="faculty-navigation">
+        RASPORED ISPITA
+      </a>
+      <span class="health-pill" [ngClass]="healthClass()" role="status" aria-live="polite">
+        {{ healthLabel() }}
+      </span>
+    </div>
   </header>
 
   <section class="content-grid">
-    <article class="panel controls-panel">
+    <article class="panel controls-panel" aria-label="Scenario and execution controls">
       <app-scenario-editor [disabled]="isLoading()" (scenarioChange)="onScenarioChange($event)" />
 
-      <div class="mode-control" role="group" aria-label="Allocation mode">
-        <button
-          type="button"
-          [class.active]="mode === 'EXPLICIT'"
-          [disabled]="isLoading()"
-          (click)="setMode('EXPLICIT')"
-        >
-          EXPLICIT
-        </button>
-        <button
-          type="button"
-          [class.active]="mode === 'AUTO'"
-          [disabled]="isLoading()"
-          (click)="setMode('AUTO')"
-        >
-          AUTO
-        </button>
-        <button
-          type="button"
-          [class.active]="mode === 'COMPARE'"
-          [disabled]="isLoading()"
-          (click)="setMode('COMPARE')"
-        >
-          COMPARE
-        </button>
-      </div>
+      <section class="execution-settings" aria-labelledby="execution-settings-title">
+        <header class="settings-heading">
+          <p class="eyebrow">Execution settings</p>
+          <h2 id="execution-settings-title">Mode and limits</h2>
+        </header>
 
-      <form
-        class="settings-form"
-        (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()"
-      >
-        @if (mode === 'EXPLICIT') {
-          <label>
-            Algorithm
-            <select name="algorithm" [(ngModel)]="selectedAlgorithm" data-testid="algorithm-select">
-              @for (algorithm of algorithms; track algorithm) {
-                <option [ngValue]="algorithm">{{ algorithm }}</option>
-              }
-            </select>
-          </label>
-        }
-
-        @if (mode === 'AUTO') {
-          <label>
-            Goal
-            <select name="goal" [(ngModel)]="selectedGoal" data-testid="goal-select">
-              @for (goal of goals; track goal) {
-                <option [ngValue]="goal">{{ goal }}</option>
-              }
-            </select>
-          </label>
-        }
-
-        <div class="limit-grid">
-          <label>
-            Backtracking time limit in milliseconds
-            <input
-              type="number"
-              min="1"
-              name="backtrackingTimeLimitMs"
-              [(ngModel)]="backtrackingTimeLimitMs"
-              placeholder="Use backend default"
-            />
-          </label>
-          <label>
-            CP-SAT time limit in seconds
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              name="cpSatTimeLimitSeconds"
-              [(ngModel)]="cpSatTimeLimitSeconds"
-              placeholder="Use backend default"
-            />
-          </label>
+        <div class="mode-control" role="group" aria-label="Allocation mode">
+          <button
+            type="button"
+            [class.active]="mode === 'EXPLICIT'"
+            [attr.aria-pressed]="mode === 'EXPLICIT'"
+            [disabled]="isLoading()"
+            (click)="setMode('EXPLICIT')"
+          >
+            EXPLICIT
+          </button>
+          <button
+            type="button"
+            [class.active]="mode === 'AUTO'"
+            [attr.aria-pressed]="mode === 'AUTO'"
+            [disabled]="isLoading()"
+            (click)="setMode('AUTO')"
+          >
+            AUTO
+          </button>
+          <button
+            type="button"
+            [class.active]="mode === 'COMPARE'"
+            [attr.aria-pressed]="mode === 'COMPARE'"
+            [disabled]="isLoading()"
+            (click)="setMode('COMPARE')"
+          >
+            COMPARE
+          </button>
         </div>
 
-        <button type="submit" class="primary-action" [disabled]="isLoading() || !scenarioValid()">
-          RUN
-        </button>
-      </form>
+        <form
+          class="settings-form"
+          (ngSubmit)="mode === 'COMPARE' ? compareAlgorithms() : runAllocation()"
+        >
+          @if (mode === 'EXPLICIT') {
+            <label>
+              Algorithm
+              <select name="algorithm" [(ngModel)]="selectedAlgorithm" data-testid="algorithm-select">
+                @for (algorithm of algorithms; track algorithm) {
+                  <option [ngValue]="algorithm">{{ algorithm }}</option>
+                }
+              </select>
+            </label>
+          }
+
+          @if (mode === 'AUTO') {
+            <label>
+              Goal
+              <select name="goal" [(ngModel)]="selectedGoal" data-testid="goal-select">
+                @for (goal of goals; track goal) {
+                  <option [ngValue]="goal">{{ goal }}</option>
+                }
+              </select>
+            </label>
+          }
+
+          <div class="limit-grid">
+            <label>
+              Backtracking time limit in milliseconds
+              <input
+                type="number"
+                min="1"
+                name="backtrackingTimeLimitMs"
+                [(ngModel)]="backtrackingTimeLimitMs"
+                placeholder="Use backend default"
+              />
+            </label>
+            <label>
+              CP-SAT time limit in seconds
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                name="cpSatTimeLimitSeconds"
+                [(ngModel)]="cpSatTimeLimitSeconds"
+                placeholder="Use backend default"
+              />
+            </label>
+          </div>
+
+          <button type="submit" class="primary-action" [disabled]="isLoading() || !scenarioValid()">
+            RUN
+          </button>
+        </form>
+      </section>
     </article>
 
-    <section class="panel output-panel" aria-live="polite">
-      @if (errorMessage(); as message) {
-        <div class="error-box">{{ message }}</div>
-      }
-
-      @if (!errorMessage() && !executionResult() && !comparisonResult() && !isLoading()) {
-        <div class="empty-output">
-          <h2>Ready</h2>
-          <p>Edit the scenario, select a mode, and run the allocation.</p>
+    <section class="panel output-panel" aria-labelledby="analysis-output-title">
+      <header class="output-heading">
+        <div>
+          <p class="eyebrow">Result workspace</p>
+          <h2 id="analysis-output-title">Allocation analysis</h2>
         </div>
-      }
+        <span class="mode-indicator">{{ mode }}</span>
+      </header>
 
-      @if (isLoading()) {
-        <div class="loading-state">Waiting for API response...</div>
-      }
+      <div class="output-content" aria-live="polite">
+        @if (errorMessage(); as message) {
+          <div class="error-box">{{ message }}</div>
+        }
 
-      @if (executionResult(); as result) {
-        <app-execution-result [request]="lastExecutionRequest()" [result]="result" />
-      }
+        @if (!errorMessage() && !executionResult() && !comparisonResult() && !isLoading()) {
+          <div class="empty-output">
+            <p class="eyebrow">Ready</p>
+            <h2>Ready for allocation</h2>
+            <p>Edit the scenario, select a mode, and run the allocation.</p>
+          </div>
+        }
 
-      @if (comparisonResult(); as result) {
-        <app-comparison-result [request]="lastComparisonRequest()" [result]="result" />
-      }
+        @if (isLoading()) {
+          <div class="loading-state">
+            <span class="loading-indicator" aria-hidden="true"></span>
+            Waiting for API response...
+          </div>
+        }
+
+        @if (executionResult(); as result) {
+          <app-execution-result [request]="lastExecutionRequest()" [result]="result" />
+        }
+
+        @if (comparisonResult(); as result) {
+          <app-comparison-result [request]="lastComparisonRequest()" [result]="result" />
+        }
+      </div>
     </section>
   </section>
 </main>

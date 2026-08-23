@@ -41,9 +41,12 @@
     }
     @if (errorMessage) {
       <div class="status-banner error-status" role="alert">
-        @if (result) {
+        @if (result && hasUsableSchedule()) {
           <strong>Novi raspored nije generisan.</strong>
           Prikazan je prethodno generisani raspored.
+        } @else if (result) {
+          <strong>Novi pokušaj nije uspeo.</strong>
+          Prikazan je rezultat prethodnog pokušaja.
         } @else {
           <strong>Raspored nije generisan.</strong>
         }
