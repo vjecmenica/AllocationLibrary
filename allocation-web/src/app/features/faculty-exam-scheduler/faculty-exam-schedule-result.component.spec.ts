@@ -70,6 +70,85 @@ describe('FacultyExamScheduleResultComponent', () => {
     card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await fixture.whenStable();
     expect(query('[data-testid="exam-details"]')).toBeNull();
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('should expose card expansion state and labelled non-modal exam details', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+
+    const card = query('[data-testid="exam-card"]') as HTMLButtonElement;
+    expect(card.getAttribute('aria-controls')).toBe('faculty-exam-details');
+    expect(card.getAttribute('aria-expanded')).toBe('false');
+
+    card.focus();
+    card.click();
+    await fixture.whenStable();
+
+    const details = query('#faculty-exam-details');
+    const heading = query('#faculty-exam-details-heading');
+    const closeButton = query('[aria-label="Zatvori detalje ispita"]') as HTMLButtonElement;
+    expect(card.getAttribute('aria-expanded')).toBe('true');
+    expect(details.tagName).toBe('ASIDE');
+    expect(details.getAttribute('role')).toBeNull();
+    expect(details.getAttribute('aria-labelledby')).toBe(heading.id);
+    expect(document.activeElement).toBe(closeButton);
+
+    closeButton.click();
+    await fixture.whenStable();
+
+    expect(query('[data-testid="exam-details"]')).toBeNull();
+    expect(card.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(card);
+  });
+
+  it('should connect result tabs to their labelled tabpanels', async () => {
+    const expected = [
+      ['schedule-tab-calendar', 'schedule-panel-calendar'],
+      ['schedule-tab-details', 'schedule-panel-details'],
+      ['schedule-tab-unscheduled', 'schedule-panel-unscheduled'],
+    ];
+
+    for (const [tabId, panelId] of expected) {
+      const tab = query(`#${tabId}`) as HTMLButtonElement;
+      tab.click();
+      await fixture.whenStable();
+
+      const panel = query(`#${panelId}`);
+      expect(tab.getAttribute('aria-controls')).toBe(panelId);
+      expect(tab.getAttribute('aria-selected')).toBe('true');
+      expect(tab.getAttribute('tabindex')).toBe('0');
+      expect(panel.getAttribute('aria-labelledby')).toBe(tabId);
+    }
+  });
+
+  it('should navigate result tabs with arrow, Home, and End keys', async () => {
+    const calendarTab = query('#schedule-tab-calendar') as HTMLButtonElement;
+    calendarTab.focus();
+
+    calendarTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await fixture.whenStable();
+    expect(fixture.componentInstance.activeView()).toBe('DETAILS');
+    expect((document.activeElement as HTMLElement).id).toBe('schedule-tab-details');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'End', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(fixture.componentInstance.activeView()).toBe('UNSCHEDULED');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Home', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(fixture.componentInstance.activeView()).toBe('CALENDAR');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(fixture.componentInstance.activeView()).toBe('UNSCHEDULED');
+    expect((document.activeElement as HTMLElement).id).toBe('schedule-tab-unscheduled');
   });
 
   it('should keep the detailed table chronologically sorted', async () => {

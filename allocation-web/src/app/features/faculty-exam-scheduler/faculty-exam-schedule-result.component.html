@@ -37,14 +37,14 @@
   }
 
   <div class="view-tabs" role="tablist" aria-label="Prikaz rasporeda">
-    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'CALENDAR'" [class.active]="activeView() === 'CALENDAR'" (click)="selectView('CALENDAR')">KALENDAR</button>
-    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'DETAILS'" [class.active]="activeView() === 'DETAILS'" (click)="selectView('DETAILS')">DETALJAN PREGLED</button>
-    <button type="button" role="tab" [attr.aria-selected]="activeView() === 'UNSCHEDULED'" [class.active]="activeView() === 'UNSCHEDULED'" (click)="selectView('UNSCHEDULED')">NERASPOREĐENI {{ result?.unscheduledExams?.length ?? 0 }}</button>
+    <button id="schedule-tab-calendar" type="button" role="tab" aria-controls="schedule-panel-calendar" [attr.aria-selected]="activeView() === 'CALENDAR'" [attr.tabindex]="activeView() === 'CALENDAR' ? 0 : -1" [class.active]="activeView() === 'CALENDAR'" (click)="selectView('CALENDAR')" (keydown)="onViewTabKeydown($event, 'CALENDAR')">KALENDAR</button>
+    <button id="schedule-tab-details" type="button" role="tab" aria-controls="schedule-panel-details" [attr.aria-selected]="activeView() === 'DETAILS'" [attr.tabindex]="activeView() === 'DETAILS' ? 0 : -1" [class.active]="activeView() === 'DETAILS'" (click)="selectView('DETAILS')" (keydown)="onViewTabKeydown($event, 'DETAILS')">DETALJAN PREGLED</button>
+    <button id="schedule-tab-unscheduled" type="button" role="tab" aria-controls="schedule-panel-unscheduled" [attr.aria-selected]="activeView() === 'UNSCHEDULED'" [attr.tabindex]="activeView() === 'UNSCHEDULED' ? 0 : -1" [class.active]="activeView() === 'UNSCHEDULED'" (click)="selectView('UNSCHEDULED')" (keydown)="onViewTabKeydown($event, 'UNSCHEDULED')">NERASPOREĐENI {{ result?.unscheduledExams?.length ?? 0 }}</button>
   </div>
 
   <div class="workspace-body">
     @if (activeView() === 'CALENDAR') {
-      <div class="calendar-view" role="tabpanel" data-testid="faculty-calendar">
+      <div id="schedule-panel-calendar" class="calendar-view" role="tabpanel" aria-labelledby="schedule-tab-calendar" data-testid="faculty-calendar">
         @if (!result) {
           <div class="calendar-empty-message">
             <strong>Raspored još nije generisan.</strong>
@@ -79,8 +79,9 @@
                                   class="exam-card"
                                   data-testid="exam-card"
                                   [attr.aria-label]="'Otvori detalje ispita ' + assignment.examCode"
+                                  aria-controls="faculty-exam-details"
                                   [attr.aria-expanded]="selectedAssignment()?.examId === assignment.examId"
-                                  (click)="openDetails(assignment)"
+                                  (click)="openDetails(assignment, $any($event.currentTarget))"
                                 >
                                   <strong>{{ assignment.examCode }}</strong>
                                   <span>{{ assignment.examName }}</span>
@@ -107,7 +108,7 @@
     }
 
     @if (activeView() === 'DETAILS') {
-      <div class="table-view" role="tabpanel">
+      <div id="schedule-panel-details" class="table-view" role="tabpanel" aria-labelledby="schedule-tab-details">
         @if (sortedAssignments().length > 0) {
           <div class="table-wrap">
             <table data-testid="scheduled-exams-table">
@@ -133,7 +134,7 @@
     }
 
     @if (activeView() === 'UNSCHEDULED') {
-      <div class="table-view" role="tabpanel">
+      <div id="schedule-panel-unscheduled" class="table-view" role="tabpanel" aria-labelledby="schedule-tab-unscheduled">
         @if (result?.unscheduledExams?.length) {
           <div class="table-wrap">
             <table data-testid="unscheduled-exams-table">
@@ -154,10 +155,10 @@
     }
 
     @if (selectedAssignment(); as assignment) {
-      <aside class="exam-details-panel" role="dialog" aria-label="Detalji ispita" data-testid="exam-details">
+      <aside id="faculty-exam-details" class="exam-details-panel" aria-labelledby="faculty-exam-details-heading" data-testid="exam-details">
         <header>
-          <div><span>Detalji ispita</span><h3>{{ assignment.examCode }}</h3></div>
-          <button type="button" aria-label="Zatvori detalje ispita" (click)="closeDetails()">×</button>
+          <div><span>Detalji ispita</span><h3 id="faculty-exam-details-heading">{{ assignment.examCode }}</h3></div>
+          <button #detailsCloseButton type="button" aria-label="Zatvori detalje ispita" (click)="closeDetails()">×</button>
         </header>
         <dl>
           <div><dt>Predmet</dt><dd>{{ assignment.examName }}</dd></div>

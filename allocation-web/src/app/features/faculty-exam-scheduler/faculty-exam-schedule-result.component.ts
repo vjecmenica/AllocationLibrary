@@ -1,4 +1,14 @@
-import { Component, HostListener, Input, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  Injector,
+  Input,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 import {
   FacultyExamAssignmentDto,
@@ -14,14 +24,21 @@ import {
 
 type ScheduleView = 'CALENDAR' | 'DETAILS' | 'UNSCHEDULED';
 
+const SCHEDULE_VIEWS: readonly ScheduleView[] = ['CALENDAR', 'DETAILS', 'UNSCHEDULED'];
+
 @Component({
   selector: 'app-faculty-exam-schedule-result',
   templateUrl: './faculty-exam-schedule-result.component.html',
   styleUrl: './faculty-exam-schedule-result.component.scss',
 })
 export class FacultyExamScheduleResultComponent {
+  private readonly injector = inject(Injector);
+  private readonly detailsCloseButton = viewChild<ElementRef<HTMLButtonElement>>(
+    'detailsCloseButton',
+  );
   private slotsValue: FacultyExamSlotDto[] = [];
   private resultValue: FacultyExamScheduleResponse | null = null;
+  private detailsTrigger: HTMLButtonElement | null = null;
 
   @Input() periodName = '';
   @Input() stale = false;
@@ -38,7 +55,7 @@ export class FacultyExamScheduleResultComponent {
   set result(value: FacultyExamScheduleResponse | null) {
     this.resultValue = value;
     this.sortedAssignments.set(sortFacultyAssignments(value?.assignments ?? []));
-    this.selectedAssignment.set(null);
+    this.closeDetails(false);
     this.refreshViewModel();
   }
 
@@ -53,20 +70,61 @@ export class FacultyExamScheduleResultComponent {
 
   selectView(view: ScheduleView): void {
     this.activeView.set(view);
-    this.selectedAssignment.set(null);
+    this.closeDetails(false);
   }
 
-  openDetails(assignment: FacultyExamAssignmentDto): void {
+  onViewTabKeydown(event: KeyboardEvent, view: ScheduleView): void {
+    const currentIndex = SCHEDULE_VIEWS.indexOf(view);
+    let targetIndex: number;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        targetIndex = (currentIndex - 1 + SCHEDULE_VIEWS.length) % SCHEDULE_VIEWS.length;
+        break;
+      case 'ArrowRight':
+        targetIndex = (currentIndex + 1) % SCHEDULE_VIEWS.length;
+        break;
+      case 'Home':
+        targetIndex = 0;
+        break;
+      case 'End':
+        targetIndex = SCHEDULE_VIEWS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    this.selectView(SCHEDULE_VIEWS[targetIndex]);
+    const tabs = (event.currentTarget as HTMLElement).parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    tabs?.[targetIndex]?.focus();
+  }
+
+  openDetails(assignment: FacultyExamAssignmentDto, trigger: HTMLButtonElement): void {
+    this.detailsTrigger = trigger;
     this.selectedAssignment.set(assignment);
+    afterNextRender(() => this.detailsCloseButton()?.nativeElement.focus(), {
+      injector: this.injector,
+    });
   }
 
-  closeDetails(): void {
+  closeDetails(restoreFocus = true): void {
+    const trigger = this.detailsTrigger;
     this.selectedAssignment.set(null);
+    this.detailsTrigger = null;
+
+    if (restoreFocus && trigger?.isConnected) {
+      afterNextRender(() => trigger.focus(), { injector: this.injector });
+    }
   }
 
-  @HostListener('keydown.escape')
-  closeDetailsWithEscape(): void {
-    this.closeDetails();
+  @HostListener('keydown.escape', ['$event'])
+  closeDetailsWithEscape(event: Event): void {
+    if (this.selectedAssignment()) {
+      event.preventDefault();
+      this.closeDetails();
+    }
   }
 
   formatDate(value: string): string {

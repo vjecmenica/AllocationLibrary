@@ -27,15 +27,15 @@
       </header>
 
       <div class="configuration-tabs" role="tablist" aria-label="Sekcije konfiguracije">
-        <button type="button" role="tab" aria-label="Rok" [attr.aria-selected]="activeConfigurationSection() === 'PERIOD'" [class.active]="activeConfigurationSection() === 'PERIOD'" (click)="selectConfigurationSection('PERIOD')"><span>Rok</span></button>
-        <button type="button" role="tab" [attr.aria-label]="'Ispiti: ' + exams.length" [attr.aria-selected]="activeConfigurationSection() === 'EXAMS'" [class.active]="activeConfigurationSection() === 'EXAMS'" (click)="selectConfigurationSection('EXAMS')"><span>Ispiti</span><strong>{{ exams.length }}</strong></button>
-        <button type="button" role="tab" [attr.aria-label]="'Sale: ' + rooms.length" [attr.aria-selected]="activeConfigurationSection() === 'ROOMS'" [class.active]="activeConfigurationSection() === 'ROOMS'" (click)="selectConfigurationSection('ROOMS')"><span>Sale</span><strong>{{ rooms.length }}</strong></button>
-        <button type="button" role="tab" [attr.aria-label]="'Dežurni: ' + invigilators.length" [attr.aria-selected]="activeConfigurationSection() === 'INVIGILATORS'" [class.active]="activeConfigurationSection() === 'INVIGILATORS'" (click)="selectConfigurationSection('INVIGILATORS')"><span>Dežurni</span><strong>{{ invigilators.length }}</strong></button>
+        <button id="faculty-tab-period" type="button" role="tab" aria-label="Rok" aria-controls="faculty-panel-period" [attr.aria-selected]="activeConfigurationSection() === 'PERIOD'" [attr.tabindex]="activeConfigurationSection() === 'PERIOD' ? 0 : -1" [class.active]="activeConfigurationSection() === 'PERIOD'" (click)="selectConfigurationSection('PERIOD')" (keydown)="onConfigurationTabKeydown($event, 'PERIOD')"><span>Rok</span></button>
+        <button id="faculty-tab-exams" type="button" role="tab" aria-controls="faculty-panel-exams" [attr.aria-label]="'Ispiti: ' + exams.length" [attr.aria-selected]="activeConfigurationSection() === 'EXAMS'" [attr.tabindex]="activeConfigurationSection() === 'EXAMS' ? 0 : -1" [class.active]="activeConfigurationSection() === 'EXAMS'" (click)="selectConfigurationSection('EXAMS')" (keydown)="onConfigurationTabKeydown($event, 'EXAMS')"><span>Ispiti</span><strong>{{ exams.length }}</strong></button>
+        <button id="faculty-tab-rooms" type="button" role="tab" aria-controls="faculty-panel-rooms" [attr.aria-label]="'Sale: ' + rooms.length" [attr.aria-selected]="activeConfigurationSection() === 'ROOMS'" [attr.tabindex]="activeConfigurationSection() === 'ROOMS' ? 0 : -1" [class.active]="activeConfigurationSection() === 'ROOMS'" (click)="selectConfigurationSection('ROOMS')" (keydown)="onConfigurationTabKeydown($event, 'ROOMS')"><span>Sale</span><strong>{{ rooms.length }}</strong></button>
+        <button id="faculty-tab-invigilators" type="button" role="tab" aria-controls="faculty-panel-invigilators" [attr.aria-label]="'Dežurni: ' + invigilators.length" [attr.aria-selected]="activeConfigurationSection() === 'INVIGILATORS'" [attr.tabindex]="activeConfigurationSection() === 'INVIGILATORS' ? 0 : -1" [class.active]="activeConfigurationSection() === 'INVIGILATORS'" (click)="selectConfigurationSection('INVIGILATORS')" (keydown)="onConfigurationTabKeydown($event, 'INVIGILATORS')"><span>Dežurni</span><strong>{{ invigilators.length }}</strong></button>
       </div>
 
       <div class="configuration-scroll">
         @if (activeConfigurationSection() === 'PERIOD') {
-          <section class="editor-section" role="tabpanel" aria-labelledby="period-editor-title">
+          <section id="faculty-panel-period" class="editor-section" role="tabpanel" aria-labelledby="faculty-tab-period">
             <header class="editor-heading"><span>01</span><div><h3 id="period-editor-title">Ispitni rok</h3><p>Period i dozvoljeni dnevni termini.</p></div></header>
             <div class="field-stack">
               <label><span>Naziv ispitnog roka</span><input type="text" formControlName="periodName" data-testid="period-name" />@if (showError(form.controls.periodName)) { <small class="field-error">Unesite naziv ispitnog roka.</small> }</label>
@@ -59,11 +59,14 @@
               }
             </div>
             @if (dailySlots.length === 0) { <p class="section-error">Dodajte najmanje jedan dnevni termin.</p> }
+            @if (dailySlots.hasError('duplicateStartTime')) {
+              <p class="section-error">Svaki dnevni termin mora imati jedinstveno početno vreme.</p>
+            }
           </section>
         }
 
         @if (activeConfigurationSection() === 'EXAMS') {
-          <section class="editor-section" role="tabpanel" aria-labelledby="exams-editor-title">
+          <section id="faculty-panel-exams" class="editor-section" role="tabpanel" aria-labelledby="faculty-tab-exams">
             <header class="editor-heading"><span>02</span><div><h3 id="exams-editor-title">Ispiti</h3><p>Predmeti, trajanje i studentske grupe.</p></div></header>
             <div class="record-list" formArrayName="exams">
               @for (exam of exams.controls; track exam.controls.id.value; let examIndex = $index) {
@@ -91,7 +94,7 @@
         }
 
         @if (activeConfigurationSection() === 'ROOMS') {
-          <section class="editor-section" role="tabpanel" aria-labelledby="rooms-editor-title">
+          <section id="faculty-panel-rooms" class="editor-section" role="tabpanel" aria-labelledby="faculty-tab-rooms">
             <header class="editor-heading"><span>03</span><div><h3 id="rooms-editor-title">Sale</h3><p>Kapaciteti i vremenska dostupnost.</p></div></header>
             <div class="record-list" formArrayName="rooms">
               @for (room of rooms.controls; track room.controls.id.value; let roomIndex = $index) {
@@ -128,7 +131,7 @@
         }
 
         @if (activeConfigurationSection() === 'INVIGILATORS') {
-          <section class="editor-section" role="tabpanel" aria-labelledby="invigilators-editor-title">
+          <section id="faculty-panel-invigilators" class="editor-section" role="tabpanel" aria-labelledby="faculty-tab-invigilators">
             <header class="editor-heading"><span>04</span><div><h3 id="invigilators-editor-title">Dežurni</h3><p>Osobe dostupne za nadzor ispita.</p></div></header>
             <div class="record-list" formArrayName="invigilators">
               @for (invigilator of invigilators.controls; track invigilator.controls.id.value; let invigilatorIndex = $index) {

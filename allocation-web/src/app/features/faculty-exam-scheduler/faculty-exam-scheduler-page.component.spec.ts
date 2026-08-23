@@ -123,6 +123,61 @@ describe('FacultyExamSchedulerPageComponent', () => {
     expect(api.scheduleExams).not.toHaveBeenCalled();
   });
 
+  it('should accept daily slots with different start times', () => {
+    component.dailySlots.at(0).controls.startTime.setValue('09:00');
+    component.dailySlots.at(1).controls.startTime.setValue('10:00');
+
+    expect(component.dailySlots.hasError('duplicateStartTime')).toBe(false);
+    expect(component.dailySlots.valid).toBe(true);
+  });
+
+  it('should reject daily slots with the same start time', async () => {
+    component.dailySlots.at(1).controls.startTime.setValue('09:00');
+    await fixture.whenStable();
+
+    expect(component.dailySlots.hasError('duplicateStartTime')).toBe(true);
+    expect(component.form.invalid).toBe(true);
+    expect(generateButton().disabled).toBe(true);
+  });
+
+  it('should reject identical daily slots', () => {
+    component.dailySlots.at(1).controls.startTime.setValue('09:00');
+    component.dailySlots.at(1).controls.endTime.setValue('12:00');
+
+    expect(component.dailySlots.hasError('duplicateStartTime')).toBe(true);
+  });
+
+  it('should not submit a schedule with duplicate daily-slot start times', () => {
+    component.dailySlots.at(1).controls.startTime.setValue('09:00');
+
+    component.generateSchedule();
+
+    expect(api.scheduleExams).not.toHaveBeenCalled();
+  });
+
+  it('should explain duplicate daily-slot start times to the user', async () => {
+    component.dailySlots.at(1).controls.startTime.setValue('09:00');
+
+    await fixture.whenStable();
+
+    expect(fixture.nativeElement.textContent).toContain(
+      'Svaki dnevni termin mora imati jedinstveno početno vreme.',
+    );
+  });
+
+  it('should add a daily slot with the first unused default start time', () => {
+    const existingStartTimes = component.dailySlots.controls
+      .map((slot) => slot.controls.startTime.value);
+
+    component.addDailySlot();
+
+    const addedSlot = component.dailySlots.at(component.dailySlots.length - 1);
+    expect(addedSlot.controls.startTime.value).toBe('08:00');
+    expect(addedSlot.controls.endTime.value).toBe('11:00');
+    expect(existingStartTimes).not.toContain(addedSlot.controls.startTime.value);
+    expect(component.dailySlots.hasError('duplicateStartTime')).toBe(false);
+  });
+
   it('should reject required text fields that contain only whitespace', () => {
     component.form.controls.periodName.setValue('   ');
 
@@ -150,6 +205,56 @@ describe('FacultyExamSchedulerPageComponent', () => {
       .map((button: HTMLButtonElement) => button.getAttribute('aria-label'));
 
     expect(tabLabels).toEqual(['Rok', 'Ispiti: 3', 'Sale: 2', 'Dežurni: 3']);
+  });
+
+  it('should connect configuration tabs to their labelled tabpanels', async () => {
+    const expected = [
+      ['faculty-tab-period', 'faculty-panel-period'],
+      ['faculty-tab-exams', 'faculty-panel-exams'],
+      ['faculty-tab-rooms', 'faculty-panel-rooms'],
+      ['faculty-tab-invigilators', 'faculty-panel-invigilators'],
+    ];
+
+    for (const [tabId, panelId] of expected) {
+      const tab = fixture.nativeElement.querySelector(`#${tabId}`) as HTMLButtonElement;
+      tab.click();
+      await fixture.whenStable();
+
+      const panel = fixture.nativeElement.querySelector(`#${panelId}`) as HTMLElement;
+      expect(tab.getAttribute('aria-controls')).toBe(panelId);
+      expect(tab.getAttribute('aria-selected')).toBe('true');
+      expect(tab.getAttribute('tabindex')).toBe('0');
+      expect(panel.getAttribute('aria-labelledby')).toBe(tabId);
+    }
+  });
+
+  it('should navigate configuration tabs with arrow, Home, and End keys', async () => {
+    const periodTab = fixture.nativeElement.querySelector('#faculty-tab-period') as HTMLButtonElement;
+    periodTab.focus();
+
+    periodTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    await fixture.whenStable();
+    expect(component.activeConfigurationSection()).toBe('EXAMS');
+    expect((document.activeElement as HTMLElement).id).toBe('faculty-tab-exams');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'End', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(component.activeConfigurationSection()).toBe('INVIGILATORS');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Home', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(component.activeConfigurationSection()).toBe('PERIOD');
+
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+    );
+    await fixture.whenStable();
+    expect(component.activeConfigurationSection()).toBe('INVIGILATORS');
+    expect((document.activeElement as HTMLElement).id).toBe('faculty-tab-invigilators');
   });
 
   it('should preserve form state when switching configuration tabs', async () => {

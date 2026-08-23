@@ -36,6 +36,13 @@ import {
 
 type ConfigurationSection = 'PERIOD' | 'EXAMS' | 'ROOMS' | 'INVIGILATORS';
 
+const CONFIGURATION_SECTIONS: readonly ConfigurationSection[] = [
+  'PERIOD',
+  'EXAMS',
+  'ROOMS',
+  'INVIGILATORS',
+];
+
 type DailySlotForm = FormGroup<{
   id: FormControl<string>;
   startTime: FormControl<string>;
@@ -86,6 +93,18 @@ const dailySlotValidator: ValidatorFn = (control: AbstractControl): ValidationEr
   return typeof start === 'string' && typeof end === 'string' && isValidDailySlot(start, end)
     ? null
     : { timeRange: true };
+};
+
+const uniqueDailySlotStartValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
+  const startTimes = (control as FormArray<DailySlotForm>).controls
+    .map((slot) => slot.controls.startTime.value.trim())
+    .filter((startTime) => startTime.length > 0);
+
+  return new Set(startTimes).size === startTimes.length
+    ? null
+    : { duplicateStartTime: true };
 };
 
 const availabilityValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
@@ -139,7 +158,7 @@ export class FacultyExamSchedulerPageComponent {
         this.createDailySlotForm('D1', '09:00', '12:00'),
         this.createDailySlotForm('D2', '13:00', '16:00'),
         this.createDailySlotForm('D3', '17:00', '20:00'),
-      ], Validators.minLength(1)),
+      ], [Validators.minLength(1), uniqueDailySlotStartValidator]),
       exams: this.formBuilder.array<ExamForm>([
         this.createExamForm('EXAM_1', 'MAT101', 'Matematika 1', 80, 120, 2, 'SI1, RTI1'),
         this.createExamForm('EXAM_2', 'OOP2', 'Objektno programiranje 2', 45, 120, 1, 'SI2'),
@@ -190,8 +209,40 @@ export class FacultyExamSchedulerPageComponent {
     this.activeConfigurationSection.set(section);
   }
 
+  onConfigurationTabKeydown(event: KeyboardEvent, section: ConfigurationSection): void {
+    const currentIndex = CONFIGURATION_SECTIONS.indexOf(section);
+    let targetIndex: number;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        targetIndex = (currentIndex - 1 + CONFIGURATION_SECTIONS.length)
+          % CONFIGURATION_SECTIONS.length;
+        break;
+      case 'ArrowRight':
+        targetIndex = (currentIndex + 1) % CONFIGURATION_SECTIONS.length;
+        break;
+      case 'Home':
+        targetIndex = 0;
+        break;
+      case 'End':
+        targetIndex = CONFIGURATION_SECTIONS.length - 1;
+        break;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    this.selectConfigurationSection(CONFIGURATION_SECTIONS[targetIndex]);
+    const tabs = (event.currentTarget as HTMLElement).parentElement
+      ?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    tabs?.[targetIndex]?.focus();
+  }
+
   addDailySlot(): void {
-    this.dailySlots.push(this.createDailySlotForm(`D${this.nextDailySlotId++}`, '09:00', '12:00'));
+    const { startTime, endTime } = this.nextDailySlotDefaults();
+    this.dailySlots.push(
+      this.createDailySlotForm(`D${this.nextDailySlotId++}`, startTime, endTime),
+    );
   }
 
   removeDailySlot(index: number): void {
@@ -346,6 +397,22 @@ export class FacultyExamSchedulerPageComponent {
       },
       { validators: dailySlotValidator },
     );
+  }
+
+  private nextDailySlotDefaults(): { startTime: string; endTime: string } {
+    const usedStartTimes = new Set(
+      this.dailySlots.controls.map((slot) => slot.controls.startTime.value),
+    );
+
+    for (let hour = 8; hour <= 20; hour++) {
+      const startTime = `${hour.toString().padStart(2, '0')}:00`;
+      if (!usedStartTimes.has(startTime)) {
+        const endTime = `${Math.min(hour + 3, 23).toString().padStart(2, '0')}:00`;
+        return { startTime, endTime };
+      }
+    }
+
+    return { startTime: '', endTime: '' };
   }
 
   private createExamForm(
