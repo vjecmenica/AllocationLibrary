@@ -39,6 +39,65 @@ describe('FacultyExamScheduleResultComponent', () => {
     expect(emptyCell.textContent).toContain('—');
   });
 
+  it('should present an OPTIMAL response as a generated schedule with summary counts', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.hasUsableSchedule()).toBe(true);
+    expect(text()).toContain('Raspored generisan');
+    expect(text()).toContain('3 / 4 ispita raspoređeno');
+    expect(query('[data-testid="schedule-summary-counts"]')).not.toBeNull();
+  });
+
+  it('should present a FEASIBLE response as a generated schedule without technical status data', async () => {
+    const response = scheduleResponse();
+    response.statistics.solverStatus = 'FEASIBLE';
+    response.statistics.stoppedByLimit = true;
+    setResult(response);
+    await fixture.whenStable();
+
+    const renderedText = text();
+    expect(fixture.componentInstance.hasUsableSchedule()).toBe(true);
+    expect(renderedText).toContain('Raspored generisan');
+    expect(queryAll('[data-testid="exam-card"]')).toHaveLength(3);
+    expect(query('[data-testid="schedule-summary-counts"]')).not.toBeNull();
+    expect(renderedText).not.toMatch(/FEASIBLE|stoppedByLimit|solver|time limit/i);
+  });
+
+  it('should present an UNKNOWN response as a completed attempt without a usable schedule', async () => {
+    setResult(nonSolutionResponse('UNKNOWN'));
+    await fixture.whenStable();
+
+    let renderedText = text();
+    expect(fixture.componentInstance.hasUsableSchedule()).toBe(false);
+    expect(renderedText).toContain('Raspored nije formiran');
+    expect(renderedText).toContain('Nije bilo moguće formirati raspored u ovom pokušaju.');
+    expect(renderedText).toContain('Pokušajte ponovo ili prilagodite konfiguraciju.');
+    expect(renderedText).not.toContain('Raspored generisan');
+    expect(renderedText).not.toContain('Raspored još nije generisan.');
+    expect(query('[data-testid="schedule-summary-counts"]')).toBeNull();
+    expect(query('[data-testid="no-usable-schedule-status"]')).not.toBeNull();
+    expect(query('[data-testid="faculty-calendar"]')).not.toBeNull();
+
+    clickTab('NERASPOREĐENI 4');
+    await fixture.whenStable();
+
+    renderedText = text();
+    expect(query('[data-testid="unscheduled-exams-table"]')).not.toBeNull();
+    expect(renderedText).toContain('Nije bilo moguće formirati izvodljiv raspored ispita.');
+    expect(renderedText).not.toMatch(/UNKNOWN|solver|CP-SAT|stoppedByLimit/i);
+  });
+
+  it('should whitelist usable statuses instead of special-casing UNKNOWN', async () => {
+    setResult(nonSolutionResponse('MODEL_INVALID'));
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.hasUsableSchedule()).toBe(false);
+    expect(text()).toContain('Raspored nije formiran');
+    expect(text()).not.toContain('Raspored generisan');
+    expect(text()).not.toContain('MODEL_INVALID');
+  });
+
   it('should show parallel exams in the same cell using actualEnd', async () => {
     setResult(scheduleResponse());
     await fixture.whenStable();
@@ -366,6 +425,27 @@ function scheduleResponse(): FacultyExamScheduleResponse {
       solverStatus: 'OPTIMAL',
       executionTimeMs: 24,
       stoppedByLimit: false,
+    },
+  };
+}
+
+function nonSolutionResponse(solverStatus: string): FacultyExamScheduleResponse {
+  const reason = 'The solver did not produce a feasible exam schedule.';
+  return {
+    assignments: [],
+    unscheduledExams: [
+      { examId: 'MAT', examCode: 'MAT101', examName: 'Matematika 1', studentCount: 60, reason },
+      { examId: 'OOP', examCode: 'OOP2', examName: 'Objektno programiranje 2', studentCount: 60, reason },
+      { examId: 'ALG', examCode: 'ALG', examName: 'Algoritmi', studentCount: 60, reason },
+      { examId: 'BP', examCode: 'BP1', examName: 'Baze podataka', studentCount: 90, reason },
+    ],
+    statistics: {
+      totalExams: 4,
+      scheduledExams: 0,
+      unscheduledExams: 4,
+      solverStatus,
+      executionTimeMs: 24,
+      stoppedByLimit: true,
     },
   };
 }

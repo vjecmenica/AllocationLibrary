@@ -35,6 +35,7 @@
 .summary-counts span { color: var(--faculty-muted); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
 
 .status-banner { border-bottom: 1px solid var(--faculty-border); padding: 9px 20px; font-size: 0.83rem; }
+.no-schedule-status { border-left: 4px solid var(--faculty-primary); background: #f5f1f1; color: var(--faculty-text); }
 .stale-status { border-left: 4px solid var(--faculty-accent); background: #fff9e7; color: #614d18; }
 .loading-status { display: flex; align-items: center; gap: 9px; color: var(--faculty-primary-dark); }
 .loading-indicator { width: 13px; height: 13px; border: 2px solid #dbc4c7; border-top-color: var(--faculty-primary); border-radius: 50%; }

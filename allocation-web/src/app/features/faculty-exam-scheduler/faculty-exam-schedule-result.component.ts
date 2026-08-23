@@ -151,6 +151,11 @@ export class FacultyExamScheduleResultComponent {
       : 'Nisu potrebni';
   }
 
+  hasUsableSchedule(): boolean {
+    const status = this.resultValue?.statistics.solverStatus;
+    return status === 'OPTIMAL' || status === 'FEASIBLE';
+  }
+
   formatUnscheduledReason(reason: string): string {
     switch (reason) {
       case UNSCHEDULED_REASON:

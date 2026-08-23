@@ -2,16 +2,18 @@
   <header class="workspace-header">
     <div>
       <p class="workspace-kicker">{{ periodName || 'Kalendar ispitnog roka' }}</p>
-      <h2 id="schedule-heading">{{ result ? 'Raspored generisan' : 'Raspored nije generisan' }}</h2>
-      @if (result) {
+      <h2 id="schedule-heading">{{ result ? (hasUsableSchedule() ? 'Raspored generisan' : 'Raspored nije formiran') : 'Raspored nije generisan' }}</h2>
+      @if (result && hasUsableSchedule()) {
         <p>{{ result.statistics.scheduledExams }} / {{ result.statistics.totalExams }} ispita raspoređeno</p>
+      } @else if (result) {
+        <p>Pokušaj je završen bez formiranog rasporeda.</p>
       } @else {
         <p>Pregled dozvoljenih termina je spreman za popunjavanje.</p>
       }
     </div>
 
-    @if (result) {
-      <div class="summary-counts" aria-label="Sažetak rasporeda">
+    @if (result && hasUsableSchedule()) {
+      <div class="summary-counts" aria-label="Sažetak rasporeda" data-testid="schedule-summary-counts">
         <div><strong>{{ result.statistics.scheduledExams }}</strong><span>raspoređeno</span></div>
         <div><strong>{{ result.statistics.unscheduledExams }}</strong><span>neraspoređeno</span></div>
       </div>
@@ -19,6 +21,12 @@
   </header>
 
   <div class="status-region">
+    @if (result && !hasUsableSchedule()) {
+      <div class="status-banner no-schedule-status" role="status" data-testid="no-usable-schedule-status">
+        <strong>Raspored nije formiran.</strong>
+        Nije bilo moguće formirati raspored u ovom pokušaju. Pokušajte ponovo ili prilagodite konfiguraciju.
+      </div>
+    }
     @if (stale) {
       <div class="status-banner stale-status" role="status">
         <strong>Konfiguracija je izmenjena.</strong>
