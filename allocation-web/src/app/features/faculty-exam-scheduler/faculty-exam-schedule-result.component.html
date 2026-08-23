@@ -18,23 +18,25 @@
     }
   </header>
 
-  @if (stale) {
-    <div class="status-banner stale-status" role="status">
-      <strong>Konfiguracija je izmenjena.</strong>
-      Ponovo generišite raspored da biste primenili izmene.
-    </div>
-  }
-  @if (loading) {
-    <div class="status-banner loading-status" role="status">
-      <span class="loading-indicator" aria-hidden="true"></span>
-      Generisanje rasporeda...
-    </div>
-  }
-  @if (errorMessage) {
-    <div class="status-banner error-status" role="alert">
-      <strong>Raspored nije generisan.</strong> {{ errorMessage }}
-    </div>
-  }
+  <div class="status-region">
+    @if (stale) {
+      <div class="status-banner stale-status" role="status">
+        <strong>Konfiguracija je izmenjena.</strong>
+        Ponovo generišite raspored da biste primenili izmene.
+      </div>
+    }
+    @if (loading) {
+      <div class="status-banner loading-status" role="status">
+        <span class="loading-indicator" aria-hidden="true"></span>
+        Generisanje rasporeda...
+      </div>
+    }
+    @if (errorMessage) {
+      <div class="status-banner error-status" role="alert">
+        <strong>Raspored nije generisan.</strong> {{ errorMessage }}
+      </div>
+    }
+  </div>
 
   <div class="view-tabs" role="tablist" aria-label="Prikaz rasporeda">
     <button id="schedule-tab-calendar" type="button" role="tab" aria-controls="schedule-panel-calendar" [attr.aria-selected]="activeView() === 'CALENDAR'" [attr.tabindex]="activeView() === 'CALENDAR' ? 0 : -1" [class.active]="activeView() === 'CALENDAR'" (click)="selectView('CALENDAR')" (keydown)="onViewTabKeydown($event, 'CALENDAR')">KALENDAR</button>

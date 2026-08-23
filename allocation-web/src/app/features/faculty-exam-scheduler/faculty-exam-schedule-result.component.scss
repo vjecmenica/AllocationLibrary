@@ -1,9 +1,10 @@
-:host { display: block; min-width: 0; height: 100%; }
+:host { display: block; min-width: 0; min-height: 0; height: 100%; overflow: hidden; }
 
 .schedule-workspace {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   min-width: 0;
+  min-height: 0;
   height: 100%;
   overflow: hidden;
   border: 1px solid var(--faculty-border);
@@ -44,7 +45,7 @@
 .view-tabs button.active { border-bottom-color: var(--faculty-accent); color: var(--faculty-primary-dark); }
 .view-tabs button:focus-visible, .exam-card:focus-visible, .exam-details-panel button:focus-visible { outline: 3px solid rgba(179, 135, 27, 0.3); outline-offset: 2px; }
 
-.workspace-body { position: relative; min-height: 0; overflow: auto; background: #f8f7f5; }
+.workspace-body { position: relative; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; background: #f8f7f5; }
 .calendar-view, .table-view { display: grid; gap: 18px; padding: 18px; }
 .calendar-empty-message, .content-empty-state, .success-state { margin: 0; border: 1px solid var(--faculty-border); border-left: 4px solid var(--faculty-accent); background: var(--faculty-surface); color: var(--faculty-muted); padding: 11px 13px; }
 .calendar-empty-message strong, .calendar-empty-message span { display: block; }
@@ -53,7 +54,7 @@
 
 .calendar-week { min-width: 0; }
 .calendar-week h3 { border-left: 4px solid var(--faculty-primary); color: var(--faculty-text); font-size: 0.95rem; padding: 3px 0 3px 9px; }
-.calendar-table-wrap, .table-wrap { margin-top: 10px; overflow-x: auto; border: 1px solid var(--faculty-border); background: var(--faculty-surface); }
+.calendar-table-wrap, .table-wrap { margin-top: 10px; overflow-x: auto; overflow-y: hidden; border: 1px solid var(--faculty-border); background: var(--faculty-surface); }
 table { width: 100%; border-collapse: collapse; }
 .calendar-grid { min-width: 760px; table-layout: fixed; }
 .calendar-grid th, .calendar-grid td, .table-view th, .table-view td { border-right: 1px solid var(--faculty-border); border-bottom: 1px solid var(--faculty-border); text-align: left; vertical-align: top; }
@@ -92,6 +93,12 @@ table { width: 100%; border-collapse: collapse; }
 .exam-details-panel dl div { border-bottom: 1px solid var(--faculty-border); padding: 10px 0; }
 .exam-details-panel dt { color: var(--faculty-muted); font-size: 0.71rem; font-weight: 700; text-transform: uppercase; }
 .exam-details-panel dd { margin: 3px 0 0; color: var(--faculty-text); }
+
+@media (max-width: 1100px) {
+  :host { height: auto; overflow: visible; }
+  .schedule-workspace { height: auto; }
+  .workspace-body { overflow: visible; }
+}
 
 @media (max-width: 720px) {
   .workspace-header { align-items: flex-start; flex-direction: column; }
