@@ -33,7 +33,13 @@
     }
     @if (errorMessage) {
       <div class="status-banner error-status" role="alert">
-        <strong>Raspored nije generisan.</strong> {{ errorMessage }}
+        @if (result) {
+          <strong>Novi raspored nije generisan.</strong>
+          Prikazan je prethodno generisani raspored.
+        } @else {
+          <strong>Raspored nije generisan.</strong>
+        }
+        {{ errorMessage }}
       </div>
     }
   </div>
@@ -144,7 +150,7 @@
               <thead><tr><th>Šifra</th><th>Predmet</th><th>Studenata</th><th>Razlog</th></tr></thead>
               <tbody>
                 @for (exam of result!.unscheduledExams; track exam.examId) {
-                  <tr><td><strong>{{ exam.examCode }}</strong></td><td>{{ exam.examName }}</td><td>{{ exam.studentCount }}</td><td>{{ exam.reason }}</td></tr>
+                  <tr><td><strong>{{ exam.examCode }}</strong></td><td>{{ exam.examName }}</td><td>{{ exam.studentCount }}</td><td>{{ formatUnscheduledReason(exam.reason) }}</td></tr>
                 }
               </tbody>
             </table>

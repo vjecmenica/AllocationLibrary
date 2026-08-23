@@ -125,10 +125,36 @@ describe('FacultyExamSchedulerPageComponent', () => {
     component.generateSchedule();
     await fixture.whenStable();
 
-    expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain(
-      'Podaci nisu ispravni.',
-    );
+    const alertText = fixture.nativeElement.querySelector('[role="alert"]')?.textContent as string;
+    expect(alertText).toContain('Raspored nije generisan.');
+    expect(alertText).toContain('Podaci nisu ispravni.');
+    expect(alertText).not.toContain('Novi raspored nije generisan.');
     expect(component.isLoading()).toBe(false);
+  });
+
+  it('should retain a stale result and explain a failed regeneration', async () => {
+    component.generateSchedule();
+    await fixture.whenStable();
+    const previousResult = component.result();
+
+    component.form.controls.periodName.setValue('Izmenjeni rok');
+    await fixture.whenStable();
+    expect(component.resultStale()).toBe(true);
+
+    api.scheduleExams.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    component.generateSchedule();
+    await fixture.whenStable();
+
+    const pageText = fixture.nativeElement.textContent as string;
+    const alertText = fixture.nativeElement.querySelector('[role="alert"]')?.textContent as string;
+    expect(component.result()).toBe(previousResult);
+    expect(component.resultStale()).toBe(true);
+    expect(fixture.nativeElement.querySelector('[data-testid="exam-card"]')).not.toBeNull();
+    expect(pageText).toContain('Konfiguracija je izmenjena.');
+    expect(alertText).toContain('Novi raspored nije generisan.');
+    expect(alertText).toContain('Prikazan je prethodno generisani raspored.');
+    expect(alertText).toContain('Proverite vezu sa servisom i pokušajte ponovo.');
+    expect(alertText).not.toContain('Raspored nije generisan.');
   });
 
   it('should reject invalid period and daily-slot values before submission', () => {

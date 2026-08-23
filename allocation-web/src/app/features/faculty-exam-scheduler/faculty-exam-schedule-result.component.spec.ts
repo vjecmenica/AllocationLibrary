@@ -133,6 +133,60 @@ describe('FacultyExamScheduleResultComponent', () => {
     expect(query('[data-testid="exam-details"]')).toBeNull();
   });
 
+  it('should return to Calendar when a new result arrives', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+    clickTab('NERASPOREĐENI 1');
+    await fixture.whenStable();
+    expect(fixture.componentInstance.activeView()).toBe('UNSCHEDULED');
+
+    setResult({ ...scheduleResponse(), assignments: [...scheduleResponse().assignments] });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.activeView()).toBe('CALENDAR');
+    expect(query('#schedule-panel-calendar')).not.toBeNull();
+  });
+
+  it('should preserve the selected view when the result reference has not changed', async () => {
+    const response = scheduleResponse();
+    setResult(response);
+    await fixture.whenStable();
+    clickTab('NERASPOREĐENI 1');
+    await fixture.whenStable();
+
+    setResult(response);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.activeView()).toBe('UNSCHEDULED');
+  });
+
+  it('should return to the empty Calendar when a result is cleared', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+    clickTab('DETALJAN PREGLED');
+    await fixture.whenStable();
+
+    setResult(null);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.activeView()).toBe('CALENDAR');
+    expect(text()).toContain('Raspored još nije generisan.');
+  });
+
+  it('should close exam details when a new result arrives', async () => {
+    setResult(scheduleResponse());
+    await fixture.whenStable();
+    (query('[data-testid="exam-card"]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.selectedAssignment()).not.toBeNull();
+
+    setResult({ ...scheduleResponse(), assignments: [...scheduleResponse().assignments] });
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.selectedAssignment()).toBeNull();
+    expect(query('[data-testid="exam-details"]')).toBeNull();
+  });
+
   it('should connect result tabs to their labelled tabpanels', async () => {
     const expected = [
       ['schedule-tab-calendar', 'schedule-panel-calendar'],
@@ -203,7 +257,45 @@ describe('FacultyExamScheduleResultComponent', () => {
 
     const table = query('[data-testid="unscheduled-exams-table"]');
     expect(table.textContent).toContain('BP1');
-    expect(table.textContent).toContain('Nije pronađena dozvoljena kombinacija.');
+    expect(table.textContent).toContain(
+      'Nije pronađena dozvoljena kombinacija termina, sale i dežurnih u okviru zadatih ograničenja.',
+    );
+    expect(table.textContent).not.toContain('No permitted combination');
+  });
+
+  it.each([
+    [
+      'No permitted combination of slot, room, and invigilators was selected under the current constraints.',
+      'Nije pronađena dozvoljena kombinacija termina, sale i dežurnih u okviru zadatih ograničenja.',
+    ],
+    [
+      'The solver did not produce a feasible exam schedule.',
+      'Nije bilo moguće formirati izvodljiv raspored ispita.',
+    ],
+  ])('should localize a known unscheduled reason', (reason, expected) => {
+    expect(fixture.componentInstance.formatUnscheduledReason(reason)).toBe(expected);
+    expect(expected.toLowerCase()).not.toContain('solver');
+  });
+
+  it('should preserve an unknown unscheduled reason', () => {
+    const reason = 'A future domain-specific reason.';
+    expect(fixture.componentInstance.formatUnscheduledReason(reason)).toBe(reason);
+  });
+
+  it('should render the no-feasible-schedule reason without solver terminology', async () => {
+    const response = scheduleResponse();
+    response.unscheduledExams[0].reason = 'The solver did not produce a feasible exam schedule.';
+    setResult(response);
+    await fixture.whenStable();
+    clickTab('NERASPOREĐENI 1');
+    await fixture.whenStable();
+
+    const tableText = query('[data-testid="unscheduled-exams-table"]').textContent;
+    expect(tableText).toContain('Nije bilo moguće formirati izvodljiv raspored ispita.');
+    expect(tableText?.toLowerCase()).not.toContain('solver');
+    expect(response.unscheduledExams[0].reason).toBe(
+      'The solver did not produce a feasible exam schedule.',
+    );
   });
 
   it('should show a stale-result notice without removing the calendar result', async () => {
@@ -215,7 +307,7 @@ describe('FacultyExamScheduleResultComponent', () => {
     expect(queryAll('[data-testid="exam-card"]')).toHaveLength(3);
   });
 
-  function setResult(result: FacultyExamScheduleResponse): void {
+  function setResult(result: FacultyExamScheduleResponse | null): void {
     fixture.componentRef.setInput('result', result);
   }
 
@@ -265,7 +357,7 @@ function scheduleResponse(): FacultyExamScheduleResponse {
       examCode: 'BP1',
       examName: 'Baze podataka',
       studentCount: 90,
-      reason: 'Nije pronađena dozvoljena kombinacija.',
+      reason: 'No permitted combination of slot, room, and invigilators was selected under the current constraints.',
     }],
     statistics: {
       totalExams: 4,

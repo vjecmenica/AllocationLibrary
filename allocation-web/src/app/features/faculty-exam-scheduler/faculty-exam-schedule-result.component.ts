@@ -25,6 +25,9 @@ import {
 type ScheduleView = 'CALENDAR' | 'DETAILS' | 'UNSCHEDULED';
 
 const SCHEDULE_VIEWS: readonly ScheduleView[] = ['CALENDAR', 'DETAILS', 'UNSCHEDULED'];
+const UNSCHEDULED_REASON =
+  'No permitted combination of slot, room, and invigilators was selected under the current constraints.';
+const NO_FEASIBLE_SCHEDULE_REASON = 'The solver did not produce a feasible exam schedule.';
 
 @Component({
   selector: 'app-faculty-exam-schedule-result',
@@ -53,8 +56,13 @@ export class FacultyExamScheduleResultComponent {
 
   @Input()
   set result(value: FacultyExamScheduleResponse | null) {
+    if (value === this.resultValue) {
+      return;
+    }
+
     this.resultValue = value;
     this.sortedAssignments.set(sortFacultyAssignments(value?.assignments ?? []));
+    this.activeView.set('CALENDAR');
     this.closeDetails(false);
     this.refreshViewModel();
   }
@@ -141,6 +149,17 @@ export class FacultyExamScheduleResultComponent {
     return invigilators.length > 0
       ? invigilators.map((invigilator) => invigilator.name).join(', ')
       : 'Nisu potrebni';
+  }
+
+  formatUnscheduledReason(reason: string): string {
+    switch (reason) {
+      case UNSCHEDULED_REASON:
+        return 'Nije pronađena dozvoljena kombinacija termina, sale i dežurnih u okviru zadatih ograničenja.';
+      case NO_FEASIBLE_SCHEDULE_REASON:
+        return 'Nije bilo moguće formirati izvodljiv raspored ispita.';
+      default:
+        return reason;
+    }
   }
 
   private refreshViewModel(): void {
