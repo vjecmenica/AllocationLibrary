@@ -2,6 +2,8 @@ import {
   generateExamSlots,
   isValidDailySlot,
   isValidDateRange,
+  isValidLocalDateTimeRange,
+  normalizeLocalDateTime,
   parseStudentGroups,
 } from './faculty-schedule.utils';
 
@@ -59,5 +61,33 @@ describe('faculty schedule utilities', () => {
 
   it('should trim student groups and remove empty values', () => {
     expect(parseStudentGroups(' SI2, RTI2, ,  ')).toEqual(['SI2', 'RTI2']);
+  });
+
+  it('should normalize local date-times without seconds', () => {
+    expect(normalizeLocalDateTime('2026-06-15T09:00')).toBe('2026-06-15T09:00:00');
+    expect(normalizeLocalDateTime('2026-06-15T09:00:30')).toBe('2026-06-15T09:00:30');
+  });
+
+  it('should compare equivalent local date-time precision consistently', () => {
+    expect(isValidLocalDateTimeRange(
+      '2026-06-15T09:00',
+      '2026-06-15T10:00',
+    )).toBe(true);
+    expect(isValidLocalDateTimeRange(
+      '2026-06-15T09:00',
+      '2026-06-15T09:00:00',
+    )).toBe(false);
+    expect(isValidLocalDateTimeRange(
+      '2026-06-15T09:00:00',
+      '2026-06-15T09:00',
+    )).toBe(false);
+    expect(isValidLocalDateTimeRange(
+      '2026-06-15T09:00',
+      '2026-06-15T09:00:30',
+    )).toBe(true);
+    expect(isValidLocalDateTimeRange(
+      '2026-06-15T10:00',
+      '2026-06-15T09:00',
+    )).toBe(false);
   });
 });

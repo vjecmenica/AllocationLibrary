@@ -11,6 +11,8 @@ export interface DailySlotInput {
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const LOCAL_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const LOCAL_DATE_TIME_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 export function isValidIsoDate(value: string): boolean {
   const match = ISO_DATE_PATTERN.exec(value);
@@ -83,6 +85,19 @@ export function normalizeLocalDateTime(value: string): string {
     return `${value}:00`;
   }
   return value;
+}
+
+export function isValidLocalDateTime(value: string): boolean {
+  const match = LOCAL_DATE_TIME_PATTERN.exec(value);
+  return match !== null && isValidIsoDate(match[1]);
+}
+
+export function isValidLocalDateTimeRange(start: string, end: string): boolean {
+  return (
+    isValidLocalDateTime(start) &&
+    isValidLocalDateTime(end) &&
+    normalizeLocalDateTime(start) < normalizeLocalDateTime(end)
+  );
 }
 
 export function parseStudentGroups(value: string): string[] {

@@ -452,6 +452,85 @@ describe('FacultyExamSchedulerPageComponent', () => {
     }
   });
 
+  it('should canonicalize disabled room availability and re-import its own export', () => {
+    const room = component.rooms.at(0);
+    component.addAvailability(room);
+    expect(room.controls.availability.invalid).toBe(true);
+
+    room.controls.availableEntirePeriod.setValue(true);
+    component.setEntirePeriodAvailability(room, true);
+
+    expect(component.form.valid).toBe(true);
+    expect(room.controls.availability.getRawValue()).toEqual([{ start: '', end: '' }]);
+
+    component.exportFacultySchedule();
+
+    const json = downloadTextFile.mock.calls[0][0];
+    const file = JSON.parse(json) as {
+      schedule: { rooms: Array<{ availableEntirePeriod: boolean; availability: unknown[] }> };
+    };
+    expect(file.schedule.rooms[0]).toMatchObject({
+      availableEntirePeriod: true,
+      availability: [],
+    });
+    expect(parseFacultyScheduleJson(json).success).toBe(true);
+  });
+
+  it('should canonicalize disabled invigilator availability and re-import its own export', () => {
+    const invigilator = component.invigilators.at(0);
+    component.addAvailability(invigilator);
+    expect(invigilator.controls.availability.invalid).toBe(true);
+
+    invigilator.controls.availableEntirePeriod.setValue(true);
+    component.setEntirePeriodAvailability(invigilator, true);
+
+    expect(component.form.valid).toBe(true);
+    expect(invigilator.controls.availability.getRawValue()).toEqual([{ start: '', end: '' }]);
+
+    component.exportFacultySchedule();
+
+    const json = downloadTextFile.mock.calls[0][0];
+    const file = JSON.parse(json) as {
+      schedule: {
+        invigilators: Array<{ availableEntirePeriod: boolean; availability: unknown[] }>;
+      };
+    };
+    expect(file.schedule.invigilators[0]).toMatchObject({
+      availableEntirePeriod: true,
+      availability: [],
+    });
+    expect(parseFacultyScheduleJson(json).success).toBe(true);
+  });
+
+  it('should validate equivalent local date-time precision in the reactive form', () => {
+    const room = component.rooms.at(0);
+    component.addAvailability(room);
+    const window = room.controls.availability.at(0);
+
+    window.setValue({
+      start: '2026-06-15T09:00',
+      end: '2026-06-15T09:00:00',
+    });
+    expect(window.invalid).toBe(true);
+
+    window.setValue({
+      start: '2026-06-15T09:00',
+      end: '2026-06-15T09:00:30',
+    });
+    expect(window.valid).toBe(true);
+  });
+
+  it('should not enable persistent submit validation after a successful export', () => {
+    expect(component.submitted()).toBe(false);
+
+    component.exportFacultySchedule();
+    component.addExam();
+
+    expect(component.submitted()).toBe(false);
+    expect(component.showError(component.exams.at(component.exams.length - 1).controls.code))
+      .toBe(false);
+  });
+
   it('should not export an invalid form', () => {
     component.form.controls.periodName.setValue('   ');
 
@@ -461,6 +540,7 @@ describe('FacultyExamSchedulerPageComponent', () => {
     expect(component.configurationStatus()?.message).toBe(
       'Najpre ispravite podatke u konfiguraciji.',
     );
+    expect(component.submitted()).toBe(true);
   });
 
   it('should load the canonical bundled demo through the import path', async () => {

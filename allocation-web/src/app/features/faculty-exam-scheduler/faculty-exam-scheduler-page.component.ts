@@ -36,6 +36,7 @@ import {
   generateExamSlots,
   isValidDailySlot,
   isValidDateRange,
+  isValidLocalDateTimeRange,
   normalizeLocalDateTime,
   parseStudentGroups,
 } from './faculty-schedule.utils';
@@ -120,7 +121,8 @@ const uniqueDailySlotStartValidator: ValidatorFn = (
 const availabilityValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const start = control.get('start')?.value;
   const end = control.get('end')?.value;
-  return typeof start === 'string' && typeof end === 'string' && start.length > 0 && start < end
+  return typeof start === 'string' && typeof end === 'string' &&
+    isValidLocalDateTimeRange(start, end)
     ? null
     : { timeRange: true };
 };
@@ -351,8 +353,8 @@ export class FacultyExamSchedulerPageComponent {
 
   exportFacultySchedule(): void {
     this.configurationStatus.set(null);
-    this.submitted.set(true);
     if (this.form.invalid) {
+      this.submitted.set(true);
       this.form.markAllAsTouched();
       this.configurationStatus.set({
         type: 'error',
@@ -579,13 +581,17 @@ export class FacultyExamSchedulerPageComponent {
         name: room.name.trim(),
         capacity: room.capacity,
         availableEntirePeriod: room.availableEntirePeriod,
-        availability: room.availability.map((window) => ({ ...window })),
+        availability: room.availableEntirePeriod
+          ? []
+          : room.availability.map((window) => ({ ...window })),
       })),
       invigilators: value.invigilators.map((invigilator) => ({
         id: invigilator.id,
         name: invigilator.name.trim(),
         availableEntirePeriod: invigilator.availableEntirePeriod,
-        availability: invigilator.availability.map((window) => ({ ...window })),
+        availability: invigilator.availableEntirePeriod
+          ? []
+          : invigilator.availability.map((window) => ({ ...window })),
       })),
     };
   }

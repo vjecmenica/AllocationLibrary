@@ -52,6 +52,49 @@ describe('faculty schedule JSON utilities', () => {
     expectInvalid(JSON.stringify(value));
   });
 
+  it('should accept a normal local date-time interval without seconds', () => {
+    const schedule = validSchedule();
+    schedule.rooms[0].availability = [
+      { start: '2026-06-15T09:00', end: '2026-06-15T10:00' },
+    ];
+
+    expect(parseFacultyScheduleJson(serializeFacultySchedule(schedule))).toEqual({
+      success: true,
+      schedule,
+    });
+  });
+
+  it.each([
+    ['2026-06-15T09:00', '2026-06-15T09:00:00'],
+    ['2026-06-15T09:00:00', '2026-06-15T09:00'],
+  ])('should reject equal local date-times with different precision', (start, end) => {
+    const schedule = validSchedule();
+    schedule.rooms[0].availability = [{ start, end }];
+
+    expectInvalid(serializeFacultySchedule(schedule));
+  });
+
+  it('should accept a positive interval ending within the same minute', () => {
+    const schedule = validSchedule();
+    schedule.rooms[0].availability = [
+      { start: '2026-06-15T09:00', end: '2026-06-15T09:00:30' },
+    ];
+
+    expect(parseFacultyScheduleJson(serializeFacultySchedule(schedule))).toEqual({
+      success: true,
+      schedule,
+    });
+  });
+
+  it('should reject a reversed local date-time interval', () => {
+    const schedule = validSchedule();
+    schedule.rooms[0].availability = [
+      { start: '2026-06-15T10:00', end: '2026-06-15T09:00' },
+    ];
+
+    expectInvalid(serializeFacultySchedule(schedule));
+  });
+
   it('should reject duplicate exam IDs', () => {
     const schedule = validSchedule();
     schedule.exams.push({ ...schedule.exams[0] });

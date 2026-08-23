@@ -2,7 +2,7 @@ import { FacultyTimeWindowDto } from '../../core/models/faculty-exam-schedule.mo
 import {
   isValidDailySlot,
   isValidDateRange,
-  isValidIsoDate,
+  isValidLocalDateTimeRange,
 } from './faculty-schedule.utils';
 
 export interface FacultyScheduleDailySlot {
@@ -213,8 +213,7 @@ function parseTimeWindow(value: unknown): FacultyTimeWindowDto | null {
   }
   const start = requiredString(value, 'start');
   const end = requiredString(value, 'end');
-  return start !== null && end !== null && isValidLocalDateTime(start) &&
-    isValidLocalDateTime(end) && start < end
+  return start !== null && end !== null && isValidLocalDateTimeRange(start, end)
     ? { start, end }
     : null;
 }
@@ -270,14 +269,6 @@ function booleanValue(value: Record<string, unknown>, key: string): boolean | nu
 
 function hasDuplicate(values: readonly string[]): boolean {
   return new Set(values).size !== values.length;
-}
-
-function isValidLocalDateTime(value: string): boolean {
-  const match = /^(\d{4}-\d{2}-\d{2})T([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(value);
-  if (!match) {
-    return false;
-  }
-  return isValidIsoDate(match[1]);
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
