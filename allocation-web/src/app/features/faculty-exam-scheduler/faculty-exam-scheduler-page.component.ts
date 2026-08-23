@@ -12,6 +12,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { finalize, firstValueFrom } from 'rxjs';
 
 import { FacultyExamScheduleApiService } from '../../core/api/faculty-exam-schedule-api.service';
@@ -142,7 +143,7 @@ function javaIntegerValidator(minimum: number): ValidatorFn {
 
 @Component({
   selector: 'app-faculty-exam-scheduler-page',
-  imports: [ReactiveFormsModule, FacultyExamScheduleResultComponent],
+  imports: [ReactiveFormsModule, RouterLink, FacultyExamScheduleResultComponent],
   templateUrl: './faculty-exam-scheduler-page.component.html',
   styleUrl: './faculty-exam-scheduler-page.component.scss',
 })

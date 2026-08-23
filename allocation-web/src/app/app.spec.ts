@@ -60,4 +60,17 @@ describe('App', () => {
       'Experimental and analytical interface',
     );
   });
+
+  it('should keep both primary interfaces available through the router', async () => {
+    const harness = await RouterTestingHarness.create();
+
+    await harness.navigateByUrl('/', FacultyExamSchedulerPageComponent);
+    expect(harness.routeNativeElement?.textContent).toContain('Raspored ispita');
+
+    await harness.navigateByUrl('/analysis', AllocationPageComponent);
+    expect(harness.routeNativeElement?.textContent).toContain('AllocationLibrary');
+    expect(harness.routeNativeElement?.textContent).toContain(
+      'Experimental and analytical interface',
+    );
+  });
 });

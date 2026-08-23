@@ -3,6 +3,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { of, Subject, throwError } from 'rxjs';
 
 import demoFile from '../../../../public/demo/faculty-exam-schedule-demo.json';
@@ -34,6 +35,7 @@ describe('FacultyExamSchedulerPageComponent', () => {
       imports: [FacultyExamSchedulerPageComponent],
       providers: [
         provideZonelessChangeDetection(),
+        provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: FacultyExamScheduleApiService, useValue: api },
@@ -49,6 +51,16 @@ describe('FacultyExamSchedulerPageComponent', () => {
 
   afterEach(() => {
     httpTesting.verify();
+  });
+
+  it('should provide secondary navigation to the Analysis interface', () => {
+    const link = fixture.nativeElement.querySelector(
+      '[data-testid="analysis-navigation"]',
+    ) as HTMLAnchorElement;
+
+    expect(link).not.toBeNull();
+    expect(link.textContent?.trim()).toBe('ANALITIČKI PRIKAZ');
+    expect(link.getAttribute('href')).toBe('/analysis');
   });
 
   it('should submit a valid faculty request built from the current form', () => {
