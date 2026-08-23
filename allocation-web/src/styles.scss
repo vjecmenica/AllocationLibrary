@@ -20,29 +20,3 @@ app-root {
   min-width: 0;
   overflow-x: hidden;
 }
-
-app-faculty-exam-scheduler-page {
-  .faculty-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-
-  .analysis-link {
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .analysis-link:focus-visible {
-    outline: 3px solid rgba(196, 154, 44, 0.35);
-    outline-offset: 2px;
-  }
-}
-
-@media (max-width: 620px) {
-  app-faculty-exam-scheduler-page .faculty-header-actions {
-    align-items: flex-start;
-    justify-content: space-between;
-    width: 100%;
-  }
-}
