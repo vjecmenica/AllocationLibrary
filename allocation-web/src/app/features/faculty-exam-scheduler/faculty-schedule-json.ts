@@ -1,5 +1,6 @@
 import { FacultyTimeWindowDto } from '../../core/models/faculty-exam-schedule.models';
 import {
+  isJavaInteger,
   isValidDailySlot,
   isValidDateRange,
   isValidLocalDateTimeRange,
@@ -257,9 +258,7 @@ function stringArray(value: unknown): string[] | null {
 
 function integer(value: Record<string, unknown>, key: string): number | null {
   const candidate = ownValue(value, key);
-  return typeof candidate === 'number' && Number.isFinite(candidate) && Number.isInteger(candidate)
-    ? candidate
-    : null;
+  return isJavaInteger(candidate) ? candidate : null;
 }
 
 function booleanValue(value: Record<string, unknown>, key: string): boolean | null {

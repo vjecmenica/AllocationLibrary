@@ -44,6 +44,43 @@ describe('faculty schedule JSON utilities', () => {
     expectInvalid(serializeFacultySchedule(schedule));
   });
 
+  it('should reject a decimal student count', () => {
+    const schedule = validSchedule();
+    schedule.exams[0].studentCount = 12.5;
+    expectInvalid(serializeFacultySchedule(schedule));
+  });
+
+  it('should reject Faculty integers above the Java Integer maximum', () => {
+    const examFields: Array<'studentCount' | 'durationMinutes' | 'requiredInvigilators'> = [
+      'studentCount',
+      'durationMinutes',
+      'requiredInvigilators',
+    ];
+
+    for (const field of examFields) {
+      const schedule = validSchedule();
+      schedule.exams[0][field] = 2147483648;
+      expectInvalid(serializeFacultySchedule(schedule));
+    }
+
+    const schedule = validSchedule();
+    schedule.rooms[0].capacity = 2147483648;
+    expectInvalid(serializeFacultySchedule(schedule));
+  });
+
+  it('should accept the Java Integer maximum for every Faculty integer field', () => {
+    const schedule = validSchedule();
+    schedule.exams[0].studentCount = 2147483647;
+    schedule.exams[0].durationMinutes = 2147483647;
+    schedule.exams[0].requiredInvigilators = 2147483647;
+    schedule.rooms[0].capacity = 2147483647;
+
+    expect(parseFacultyScheduleJson(serializeFacultySchedule(schedule))).toEqual({
+      success: true,
+      schedule,
+    });
+  });
+
   it('should reject invalid availability structures', () => {
     const value = fileRecord();
     const schedule = value['schedule'] as Record<string, unknown>;

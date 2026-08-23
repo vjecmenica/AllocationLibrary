@@ -1,5 +1,6 @@
 import {
   generateExamSlots,
+  isJavaInteger,
   isValidDailySlot,
   isValidDateRange,
   isValidLocalDateTimeRange,
@@ -89,5 +90,14 @@ describe('faculty schedule utilities', () => {
       '2026-06-15T10:00',
       '2026-06-15T09:00',
     )).toBe(false);
+  });
+
+  it('should recognize only finite 32-bit signed integers', () => {
+    expect(isJavaInteger(-2147483648)).toBe(true);
+    expect(isJavaInteger(2147483647)).toBe(true);
+    expect(isJavaInteger(12.5)).toBe(false);
+    expect(isJavaInteger(2147483648)).toBe(false);
+    expect(isJavaInteger(-2147483649)).toBe(false);
+    expect(isJavaInteger(Number.POSITIVE_INFINITY)).toBe(false);
   });
 });

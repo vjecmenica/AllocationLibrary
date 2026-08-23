@@ -91,9 +91,9 @@
                       <label><span>Naziv predmeta</span><input type="text" formControlName="name" />@if (showError(exam.controls.name)) { <small class="field-error">Obavezno polje</small> }</label>
                     </div>
                     <div class="three-column-fields">
-                      <label><span>Studenata</span><input type="number" min="1" formControlName="studentCount" />@if (showError(exam.controls.studentCount)) { <small class="field-error">Mora biti > 0</small> }</label>
-                      <label><span>Trajanje (min)</span><input type="number" min="1" formControlName="durationMinutes" />@if (showError(exam.controls.durationMinutes)) { <small class="field-error">Mora biti > 0</small> }</label>
-                      <label><span>Dežurnih</span><input type="number" min="0" formControlName="requiredInvigilators" />@if (showError(exam.controls.requiredInvigilators)) { <small class="field-error">Mora biti ≥ 0</small> }</label>
+                      <label><span>Studenata</span><input type="number" min="1" max="2147483647" step="1" formControlName="studentCount" />@if (showError(exam.controls.studentCount)) { <small class="field-error">Unesite ceo broj veći od 0.</small> }</label>
+                      <label><span>Trajanje (min)</span><input type="number" min="1" max="2147483647" step="1" formControlName="durationMinutes" />@if (showError(exam.controls.durationMinutes)) { <small class="field-error">Unesite ceo broj veći od 0.</small> }</label>
+                      <label><span>Dežurnih</span><input type="number" min="0" max="2147483647" step="1" formControlName="requiredInvigilators" />@if (showError(exam.controls.requiredInvigilators)) { <small class="field-error">Unesite ceo broj veći ili jednak 0.</small> }</label>
                     </div>
                     <label><span>Studentske grupe</span><input type="text" formControlName="studentGroups" placeholder="SI2, RTI2" /><small class="field-help">Grupe odvojite zarezom.</small></label>
                     <div class="record-actions"><button type="button" class="remove-text-action" (click)="removeExam(examIndex)">UKLONI ISPIT</button></div>
@@ -116,7 +116,7 @@
                   <div class="record-editor">
                     <div class="two-column-fields">
                       <label><span>Naziv sale</span><input type="text" formControlName="name" />@if (showError(room.controls.name)) { <small class="field-error">Obavezno polje</small> }</label>
-                      <label><span>Kapacitet</span><input type="number" min="1" formControlName="capacity" />@if (showError(room.controls.capacity)) { <small class="field-error">Mora biti > 0</small> }</label>
+                      <label><span>Kapacitet</span><input type="number" min="1" max="2147483647" step="1" formControlName="capacity" />@if (showError(room.controls.capacity)) { <small class="field-error">Unesite ceo broj veći od 0.</small> }</label>
                     </div>
                     <label class="checkbox-field"><input type="checkbox" formControlName="availableEntirePeriod" (change)="setEntirePeriodAvailability(room, $any($event.target).checked)" /><span>Dostupna tokom celog ispitnog roka</span></label>
                     @if (!room.controls.availableEntirePeriod.value) {

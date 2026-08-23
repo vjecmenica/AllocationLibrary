@@ -34,6 +34,7 @@ import {
 import {
   fullPeriodAvailability,
   generateExamSlots,
+  isJavaInteger,
   isValidDailySlot,
   isValidDateRange,
   isValidLocalDateTimeRange,
@@ -131,6 +132,13 @@ const nonBlankValidator: ValidatorFn = (control: AbstractControl): ValidationErr
   typeof control.value === 'string' && control.value.trim().length > 0
     ? null
     : { blank: true };
+
+function javaIntegerValidator(minimum: number): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null =>
+    isJavaInteger(control.value) && control.value >= minimum
+      ? null
+      : { integerRange: true };
+}
 
 @Component({
   selector: 'app-faculty-exam-scheduler-page',
@@ -704,9 +712,12 @@ export class FacultyExamSchedulerPageComponent {
       id: this.formBuilder.control(id),
       code: this.formBuilder.control(code, nonBlankValidator),
       name: this.formBuilder.control(name, nonBlankValidator),
-      studentCount: this.formBuilder.control(studentCount, [Validators.required, Validators.min(1)]),
-      durationMinutes: this.formBuilder.control(durationMinutes, [Validators.required, Validators.min(1)]),
-      requiredInvigilators: this.formBuilder.control(requiredInvigilators, [Validators.required, Validators.min(0)]),
+      studentCount: this.formBuilder.control(studentCount, javaIntegerValidator(1)),
+      durationMinutes: this.formBuilder.control(durationMinutes, javaIntegerValidator(1)),
+      requiredInvigilators: this.formBuilder.control(
+        requiredInvigilators,
+        javaIntegerValidator(0),
+      ),
       studentGroups: this.formBuilder.control(studentGroups),
     });
   }
@@ -728,7 +739,7 @@ export class FacultyExamSchedulerPageComponent {
     return this.formBuilder.group({
       id: this.formBuilder.control(id),
       name: this.formBuilder.control(name, nonBlankValidator),
-      capacity: this.formBuilder.control(capacity, [Validators.required, Validators.min(1)]),
+      capacity: this.formBuilder.control(capacity, javaIntegerValidator(1)),
       availableEntirePeriod: this.formBuilder.control(availableEntirePeriod),
       availability,
     });

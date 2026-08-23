@@ -9,6 +9,9 @@ export interface DailySlotInput {
   endTime: string;
 }
 
+export const JAVA_INTEGER_MIN = -2147483648;
+export const JAVA_INTEGER_MAX = 2147483647;
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const LOCAL_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const LOCAL_DATE_TIME_PATTERN =
@@ -97,6 +100,16 @@ export function isValidLocalDateTimeRange(start: string, end: string): boolean {
     isValidLocalDateTime(start) &&
     isValidLocalDateTime(end) &&
     normalizeLocalDateTime(start) < normalizeLocalDateTime(end)
+  );
+}
+
+export function isJavaInteger(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    Number.isInteger(value) &&
+    value >= JAVA_INTEGER_MIN &&
+    value <= JAVA_INTEGER_MAX
   );
 }
 

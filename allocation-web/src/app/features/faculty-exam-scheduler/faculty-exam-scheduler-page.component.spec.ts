@@ -206,6 +206,50 @@ describe('FacultyExamSchedulerPageComponent', () => {
     expect(api.scheduleExams).not.toHaveBeenCalled();
   });
 
+  it('should enforce Java Integer values for exam numeric controls', () => {
+    const exam = component.exams.at(0);
+
+    exam.controls.studentCount.setValue(80);
+    expect(exam.controls.studentCount.valid).toBe(true);
+    exam.controls.studentCount.setValue(80.5);
+    expect(exam.controls.studentCount.invalid).toBe(true);
+    exam.controls.studentCount.setValue(2147483648);
+    expect(exam.controls.studentCount.invalid).toBe(true);
+
+    exam.controls.durationMinutes.setValue(120.5);
+    expect(exam.controls.durationMinutes.invalid).toBe(true);
+
+    exam.controls.requiredInvigilators.setValue(1.5);
+    expect(exam.controls.requiredInvigilators.invalid).toBe(true);
+    exam.controls.requiredInvigilators.setValue(0);
+    expect(exam.controls.requiredInvigilators.valid).toBe(true);
+  });
+
+  it('should enforce Java Integer values for room capacity', () => {
+    const capacity = component.rooms.at(0).controls.capacity;
+
+    capacity.setValue(100.5);
+    expect(capacity.invalid).toBe(true);
+    capacity.setValue(2147483648);
+    expect(capacity.invalid).toBe(true);
+    capacity.setValue(100);
+    expect(capacity.valid).toBe(true);
+  });
+
+  it.each([80.5, 2147483648])(
+    'should disable Generate and skip the API for invalid studentCount %s',
+    async (studentCount) => {
+      component.exams.at(0).controls.studentCount.setValue(studentCount);
+      await fixture.whenStable();
+
+      expect(component.form.invalid).toBe(true);
+      expect(generateButton().disabled).toBe(true);
+
+      component.generateSchedule();
+      expect(api.scheduleExams).not.toHaveBeenCalled();
+    },
+  );
+
   it('should not expose allocation algorithm controls in the faculty template', () => {
     const text = (fixture.nativeElement.textContent as string).toUpperCase();
 
@@ -541,6 +585,15 @@ describe('FacultyExamSchedulerPageComponent', () => {
       'Najpre ispravite podatke u konfiguraciji.',
     );
     expect(component.submitted()).toBe(true);
+  });
+
+  it('should not export a decimal student count', () => {
+    component.exams.at(0).controls.studentCount.setValue(12.5);
+
+    component.exportFacultySchedule();
+
+    expect(component.form.invalid).toBe(true);
+    expect(downloadTextFile).not.toHaveBeenCalled();
   });
 
   it('should load the canonical bundled demo through the import path', async () => {
